@@ -1,0 +1,28 @@
+{
+  "name": "purescript-abc-player",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "output"
+  ],
+  "dependencies": {
+    "purescript-prelude": "^2.1.0",
+    "purescript-console": "^2.0.0",
+    "purescript-eff": "^2.0.0",
+    "purescript-exceptions": "^2.0.0",
+    "purescript-pux": "^7.0.0",
+    "purescript-pux-css": "^3.1.0",
+    "purescript-tuples": "^3.1.0",
+    "purescript-maybe": "^2.0.1",
+    "purescript-aff": "^2.0.3",
+    "purescript-either": "^2.1.0",
+    "purescript-foreign": "^3.1.0",
+    "purescript-functions": "^2.0.0",
+    "purescript-abc-parser": "https://github.com/newlandsvalley/purescript-abc-parser.git",
+    "purescript-debug": "^2.0.0"
+  },
+  "devDependencies": {
+    "purescript-psci-support": "^2.0.0"
+  }
+}
