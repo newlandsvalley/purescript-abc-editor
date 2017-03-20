@@ -1,7 +1,7 @@
 module Main where
 
-import Abc (PositionedParseError(..), parse)
-import Abc.ParseTree (AbcTune)
+import Data.Abc.Parser (PositionedParseError(..), parse)
+import Data.Abc (AbcTune)
 import CSS.Font (color, fontSize)
 import CSS.Geometry (paddingTop, paddingBottom, marginLeft, marginRight, marginTop, width)
 import CSS.TextAlign (textAlign, leftTextAlign)
