@@ -7,6 +7,7 @@ import CSS.TextAlign (textAlign, leftTextAlign)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Exception (EXCEPTION)
+import Control.Monad.Aff (Aff)
 import Data.Abc (AbcTune)
 import Data.Abc.Parser (PositionedParseError(..), parse)
 import VexTab.Score as VexScore
@@ -33,6 +34,7 @@ data Action
     | RequestFileUpload
     | RequestFileDownload
     | FileLoaded Filespec
+    | VexInitialised Boolean -- is Vex initialised ?
     | VexRendered Boolean    -- is the abc rendered as a score ?
     | Reset
 
@@ -40,6 +42,7 @@ type State = {
     abc :: String
   , fileName :: Maybe String
   , tuneResult :: Either PositionedParseError AbcTune
+  , vexInitialised :: Boolean
   , vexRendered :: Boolean
 }
 
@@ -58,13 +61,6 @@ initialiseVex =
    in
      VexScore.initialise (config)
 
--- | run any initialisation code and then return the initial state
-initialiseApp :: forall e. Eff (vt :: VexScore.VEXTAB | e) State
-initialiseApp = do
-  vexInitialised <- initialiseVex
-  pure initialState
-
-
 {- this is defined within Pux
 type EffModel state action eff =
   { state :: state
@@ -76,6 +72,7 @@ initialState = {
     abc : "initial value"
   , fileName : Nothing
   , tuneResult : Left (PositionedParseError { pos : 0, error : "not started" })
+  , vexInitialised : false    -- we initialise on first reference
   , vexRendered : false
   }
 
@@ -104,9 +101,12 @@ update RequestFileDownload state =
 update (FileLoaded filespec) state =
   onChangedFile filespec state
 update Reset state =
-  noEffects $ state { abc = "", fileName = Nothing }
+  noEffects $ state { abc = "", fileName = Nothing, vexRendered = false }
+update (VexInitialised initialised) state =
+  noEffects $ state { vexInitialised = initialised }
 update (VexRendered rendered) state =
   noEffects $ state { vexRendered = rendered }
+
 
 -- | make sure everything is notified if the ABC changes for any reason
 -- | we'll eventually have to add effects
@@ -116,13 +116,15 @@ onChangedAbc abc state =
     tuneResult =
       parse $ abc <> " \r\n"
     newState =
-      state { tuneResult = tuneResult, abc = abc }
+      state { tuneResult = tuneResult, abc = abc, vexRendered = false }
   in
     case tuneResult of
       Right tune ->
         {state: newState
           , effects:
-            [ do
+            [
+              ensureVexInitialised newState
+            , do
                 rendered <- liftEff $ renderTune tune
                 pure $ VexRendered rendered
             ]
@@ -139,6 +141,18 @@ onChangedFile filespec state =
       state { fileName = Just filespec.name}
   in
     onChangedAbc filespec.contents newState
+
+-- | this is a horribly complicated type signature that I need to understand
+-- | we cannot initialise Vex until we have rendered the Dom so initialise on first reference
+-- ensureVexInitialised :: forall e. State -> Aff e Action
+ensureVexInitialised state =
+  if (state.vexInitialised) then
+    do
+      pure $ NoOp
+  else
+    do
+      initialised <- liftEff initialiseVex
+      pure $ VexInitialised initialised
 
 -- | display a snippet of text with the error highlighted
 viewParseError :: State -> Html Action
@@ -216,8 +230,7 @@ view state =
             ]
               [ ]
          , viewParseError state,
-         div [] []
-           {-}
+         div []
            [ canvas
               [ id_ "vextab"
               -- , hidden (isParseError model || isJust model.vextab.error),
@@ -225,7 +238,6 @@ view state =
               ]
                 []
            ]
-           -}
          ]
     ]
 
@@ -328,10 +340,8 @@ errorHighlightStyle =
 main :: Eff (channel :: CHANNEL, err :: EXCEPTION, fileio :: FILEIO, vt :: VexScore.VEXTAB ) Unit
 main = do
 
-  state <- initialiseApp
-
   app <- start
-    { initialState: state
+    { initialState: initialState
     , update: update
     , view: view
     , inputs: []
