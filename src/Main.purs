@@ -1,6 +1,5 @@
 module Main where
 
-
 import CSS.Color (red)
 import CSS.Font (color, fontSize)
 import CSS.Geometry (paddingTop, paddingBottom, marginLeft, marginRight, marginTop, width)
@@ -11,8 +10,7 @@ import Control.Monad.Eff.Exception (EXCEPTION)
 import Data.Abc (AbcTune)
 import Data.Abc.Parser (PositionedParseError(..), parse)
 import VexTab.Score as VexScore
-import VexTab.Abc.Canonical (toScoreText)
-import VexTab.Abc.Translate (translate)
+import VexTab.Abc.Score (renderTune)
 import Data.Array (length, slice)
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..), fromMaybe)
@@ -125,9 +123,7 @@ onChangedAbc abc state =
         {state: newState
           , effects:
             [ do
-                let
-                  vexText = produceScore tune
-                rendered <- liftEff $ VexScore.render vexText
+                rendered <- liftEff $ renderTune tune
                 pure $ VexRendered rendered
             ]
 
@@ -143,16 +139,6 @@ onChangedFile filespec state =
       state { fileName = Just filespec.name}
   in
     onChangedAbc filespec.contents newState
-
-produceScore :: AbcTune -> String
-produceScore tune =
-  let
-    eitherText =
-      translate tune
-  in
-    case eitherText of
-      Left err -> err
-      Right score -> toScoreText score
 
 -- | display a snippet of text with the error highlighted
 viewParseError :: State -> Html Action
