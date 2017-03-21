@@ -1,26 +1,28 @@
 module Main where
 
-import Data.Abc.Parser (PositionedParseError(..), parse)
-import Data.Abc (AbcTune)
+
+import CSS.Color (red)
 import CSS.Font (color, fontSize)
 import CSS.Geometry (paddingTop, paddingBottom, marginLeft, marginRight, marginTop, width)
 import CSS.TextAlign (textAlign, leftTextAlign)
-import CSS.Color (red)
--- import Control.Monad.Aff (Aff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Exception (EXCEPTION)
+import Data.Abc (AbcTune)
+import Data.Abc.Parser (PositionedParseError(..), parse)
+import VexTab.Score as VexScore
+import VexTab.Abc.Canonical (toScoreText)
+import VexTab.Abc.Translate (translate)
+import Data.Array (length, slice)
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (fromCharArray, toCharArray)
-import Data.Array (length, slice)
--- import Data.Tuple (Tuple(..))
 import FileIO.FileIO (FILEIO, Filespec, loadTextFile, saveTextFile)
-import Prelude (Unit, bind, const, max, min, pure, ($), (#), (<>), (+), (-))
+import Prelude (Unit, bind, const, max, min, not, pure, ($), (#), (<>), (+), (-))
 import Pux (EffModel, renderToDOM, start, noEffects)
 import Pux.CSS (em, backgroundColor, px, rgb, style, center, display, block)
-import Pux.Html (Html, Attribute, text, button, textarea, h1, span, div, input, p)
-import Pux.Html.Attributes (rows, cols, placeholder, value, type_, id_, accept)
+import Pux.Html (Html, Attribute, text, button, canvas, textarea, h1, span, div, input, p)
+import Pux.Html.Attributes (rows, cols, hidden, placeholder, value, type_, id_, accept)
 import Pux.Html.Events (onInput, onChange, onClick)
 import Signal.Channel (CHANNEL)
 
@@ -32,15 +34,38 @@ data Action
     | Abc String
     | RequestFileUpload
     | RequestFileDownload
-    -- | FileLoaded (Maybe Filespec)
     | FileLoaded Filespec
+    | VexRendered Boolean    -- is the abc rendered as a score ?
     | Reset
 
 type State = {
     abc :: String
   , fileName :: Maybe String
   , tuneResult :: Either PositionedParseError AbcTune
+  , vexRendered :: Boolean
 }
+
+-- | initialise VexTab
+initialiseVex :: forall e. Eff (vt :: VexScore.VEXTAB | e) Boolean
+initialiseVex =
+  let
+    config :: VexScore.Config
+    config =
+      { canvasDivId : "#vextab"
+      , canvasX : 10
+      , canvasY : 10
+      , canvasWidth : 1200
+      , scale : 0.8
+      }
+   in
+     VexScore.initialise (config)
+
+-- | run any initialisation code and then return the initial state
+initialiseApp :: forall e. Eff (vt :: VexScore.VEXTAB | e) State
+initialiseApp = do
+  vexInitialised <- initialiseVex
+  pure initialState
+
 
 {- this is defined within Pux
 type EffModel state action eff =
@@ -53,9 +78,10 @@ initialState = {
     abc : "initial value"
   , fileName : Nothing
   , tuneResult : Left (PositionedParseError { pos : 0, error : "not started" })
+  , vexRendered : false
   }
 
-update :: Action -> State -> EffModel State Action (fileio :: FILEIO)
+update :: Action -> State -> EffModel State Action (fileio :: FILEIO, vt :: VexScore.VEXTAB)
 update NoOp state =  noEffects $ state
 update (Abc s) state =  onChangedAbc s state
 update RequestFileUpload state =
@@ -78,27 +104,55 @@ update RequestFileDownload state =
        ]
     }
 update (FileLoaded filespec) state =
-   onChangedFile filespec state
-update Reset state = noEffects $ state { abc = "", fileName = Nothing }
+  onChangedFile filespec state
+update Reset state =
+  noEffects $ state { abc = "", fileName = Nothing }
+update (VexRendered rendered) state =
+  noEffects $ state { vexRendered = rendered }
 
 -- | make sure everything is notified if the ABC changes for any reason
 -- | we'll eventually have to add effects
-onChangedAbc  :: String -> State ->  EffModel State Action (fileio :: FILEIO)
+onChangedAbc  :: forall e. String -> State ->  EffModel State Action (vt :: VexScore.VEXTAB | e)
 onChangedAbc abc state =
   let
     tuneResult =
       parse $ abc <> " \r\n"
+    newState =
+      state { tuneResult = tuneResult, abc = abc }
   in
-    noEffects $ state { tuneResult = tuneResult, abc = abc }
+    case tuneResult of
+      Right tune ->
+        {state: newState
+          , effects:
+            [ do
+                let
+                  vexText = produceScore tune
+                rendered <- liftEff $ VexScore.render vexText
+                pure $ VexRendered rendered
+            ]
+
+        }
+      Left err ->
+        noEffects newState
 
 -- | make sure everything is notified if a new file is loaded
-onChangedFile :: Filespec -> State -> EffModel State Action (fileio :: FILEIO)
+onChangedFile :: forall e. Filespec -> State -> EffModel State Action (fileio :: FILEIO, vt :: VexScore.VEXTAB| e)
 onChangedFile filespec state =
   let
     newState =
       state { fileName = Just filespec.name}
   in
     onChangedAbc filespec.contents newState
+
+produceScore :: AbcTune -> String
+produceScore tune =
+  let
+    eitherText =
+      translate tune
+  in
+    case eitherText of
+      Left err -> err
+      Right score -> toScoreText score
 
 -- | display a snippet of text with the error highlighted
 viewParseError :: State -> Html Action
@@ -175,9 +229,20 @@ view state =
             , taStyle
             ]
               [ ]
-         , viewParseError state
+         , viewParseError state,
+         div [] []
+           {-}
+           [ canvas
+              [ id_ "vextab"
+              -- , hidden (isParseError model || isJust model.vextab.error),
+              , hidden (not state.vexRendered)
+              ]
+                []
+           ]
+           -}
          ]
     ]
+
 
 taStyle :: forall a. Attribute a
 taStyle =
@@ -274,11 +339,13 @@ errorHighlightStyle =
     style $ do
       color red
 
--- main :: forall e. Eff (channel :: CHANNEL, err :: EXCEPTION, fileio :: FILEIO | e) Unit
-main :: Eff (channel :: CHANNEL, err :: EXCEPTION, fileio :: FILEIO ) Unit
+main :: Eff (channel :: CHANNEL, err :: EXCEPTION, fileio :: FILEIO, vt :: VexScore.VEXTAB ) Unit
 main = do
+
+  state <- initialiseApp
+
   app <- start
-    { initialState: initialState
+    { initialState: state
     , update: update
     , view: view
     , inputs: []
