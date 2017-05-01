@@ -24,7 +24,7 @@ import Text.Smolder.HTML.Attributes (type', id, accept, hidden, rows, cols, valu
 import Text.Smolder.Markup (Attribute, text, (#!), (!))
 import CSS.Size (px, em)
 import CSS.Geometry (width, padding, margin)
-import CSS.Font (color, fontSize)
+import CSS.Font (color, fontFamily, fontSize)
 -- import CSS.Common (auto)
 import CSS.Background (backgroundColor)
 import CSS.Color (rgb, red)
@@ -207,7 +207,7 @@ view :: State -> HTML Event
 view state =
   div do
     h1 ! centreStyle $ text "ABC Editor"
-    div do
+    div ! leftPaneStyle $ do
       span ! leftPanelLabelStyle $ text "Load an ABC file:"
       input ! inputStyle ! type' "file" ! id "fileinput" ! accept ".abc, .txt"
            #! onChange (const RequestFileUpload)
@@ -215,7 +215,7 @@ view state =
       button #! onClick (const Reset) $ text "reset"
     div do
       p $ text $ fromMaybe "no file chosen" state.fileName
-      textarea ! cols "70" ! rows "15" ! value state.abc
+      textarea ! taStyle ! cols "70" ! rows "15" ! value state.abc
         #! onInput (\e -> Abc (targetValue e) ) $ text ""
       viewParseError state
       viewCanvas state
@@ -231,7 +231,7 @@ taStyle =
       textAlign leftTextAlign
       margin (px 0.0) (px 2.0) (px 0.0) (px 2.0)
       display block
-      -- fontFamily monospace
+      -- fontFamily [ "monospace" ]
       -- align center
 
 {-}
