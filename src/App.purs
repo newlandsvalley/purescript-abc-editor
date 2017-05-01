@@ -3,28 +3,30 @@ module App where
 -- import CSS.Geometry (paddingTop, paddingBottom, marginLeft, marginRight, marginTop, width)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
--- import Control.Monad.Eff.Exception (EXCEPTION)
--- import Control.Monad.Aff (Aff)
+import Control.Monad.Aff (Aff)
 import Data.Abc (AbcTune)
 import Data.Abc.Parser (PositionedParseError(..), parse)
+import Data.Abc.Midi (toMidi)
 import VexTab.Score as VexScore
 import VexTab.Abc.Score (renderTune)
+import Audio.SoundFont (AUDIO)
+import Data.Midi.Player as MidiPlayer
 import Data.Array (length, slice)
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (fromCharArray, toCharArray)
 import FileIO.FileIO (FILEIO, Filespec, loadTextFile, saveTextFile)
 import Prelude (bind, const, max, min, pure, ($), (#), (<>), (+), (-))
-import Pux (EffModel, noEffects)
+import Pux (EffModel, noEffects, mapEffects, mapState)
 import Pux.DOM.Events (onClick, onChange, onInput, targetValue)
-import Pux.DOM.HTML (HTML)
+import Pux.DOM.HTML (HTML, child)
 import Pux.DOM.HTML.Attributes (style)
 import Text.Smolder.HTML (button, canvas, div, h1, input, p, span, textarea)
 import Text.Smolder.HTML.Attributes (type', id, accept, hidden, rows, cols, value)
 import Text.Smolder.Markup (Attribute, text, (#!), (!))
 import CSS.Size (px, em)
 import CSS.Geometry (width, padding, margin)
-import CSS.Font (color, fontFamily, fontSize)
+import CSS.Font (color, fontSize)
 -- import CSS.Common (auto)
 import CSS.Background (backgroundColor)
 import CSS.Color (rgb, red)
@@ -42,6 +44,7 @@ data Event
     | FileLoaded Filespec
     | VexInitialised Boolean -- is Vex initialised ?
     | VexRendered Boolean    -- is the abc rendered as a score ?
+    | PlayerEvent MidiPlayer.Event
     | Reset
 
 type State = {
@@ -50,6 +53,7 @@ type State = {
   , tuneResult :: Either PositionedParseError AbcTune
   , vexInitialised :: Boolean
   , vexRendered :: Boolean
+  , playerState :: Maybe MidiPlayer.State
 }
 
 -- | initialise VexTab
@@ -75,9 +79,11 @@ initialState = {
   , tuneResult : Left (PositionedParseError { pos : 0, error : "not started" })
   , vexInitialised : false    -- we initialise on first reference
   , vexRendered : false
+  , playerState : Nothing
   }
 
-foldp :: Event -> State -> EffModel State Event (fileio :: FILEIO, vt :: VexScore.VEXTAB)
+
+foldp :: Event -> State -> EffModel State Event (fileio :: FILEIO, au :: AUDIO, vt :: VexScore.VEXTAB)
 foldp NoOp state =  noEffects $ state
 foldp (Abc s) state =  onChangedAbc s state
 foldp RequestFileUpload state =
@@ -107,7 +113,14 @@ foldp (VexInitialised initialised) state =
   noEffects $ state { vexInitialised = initialised }
 foldp (VexRendered rendered) state =
   noEffects $ state { vexRendered = rendered }
-
+foldp (PlayerEvent e) state =
+  case state.playerState of
+    Just pstate ->
+      MidiPlayer.foldp e pstate
+        # mapEffects PlayerEvent
+        # mapState \pst -> state { playerState = Just pst }
+    _ ->
+      noEffects state
 
 -- | make sure everything is notified if the ABC changes for any reason
 -- | we'll eventually have to add effects
@@ -121,18 +134,20 @@ onChangedAbc abc state =
   in
     case tuneResult of
       Right tune ->
-        {state: newState
+        {state: newState { playerState = Just MidiPlayer.initialState}
           , effects:
             [
               ensureVexInitialised newState
             , do
                 rendered <- liftEff $ renderTune tune
                 pure $ Just (VexRendered rendered)
+            , do
+                pure $ Just (PlayerEvent (MidiPlayer.SetRecording (toMidi tune)))
             ]
 
         }
       Left err ->
-        noEffects newState
+        noEffects newState { playerState = Nothing }
 
 -- | make sure everything is notified if a new file is loaded
 onChangedFile :: forall e. Filespec -> State -> EffModel State Event (fileio :: FILEIO, vt :: VexScore.VEXTAB| e)
@@ -143,9 +158,8 @@ onChangedFile filespec state =
   in
     onChangedAbc filespec.contents newState
 
--- | this is a horribly complicated type signature that I need to understand
 -- | we cannot initialise Vex until we have rendered the Dom so initialise on first reference
--- ensureVexInitialised :: forall e. State -> Aff e (Maybe Event)
+ensureVexInitialised :: forall e. State -> Aff (vt :: VexScore.VEXTAB | e) (Maybe Event)
 ensureVexInitialised state =
   if (state.vexInitialised) then
     do
@@ -202,6 +216,14 @@ viewCanvas state =
       div do
         canvas ! id "vextab" ! hidden "hidden" $ text ""
 
+-- | only display the player if we have a MIDI recording
+viewPlayer :: State -> HTML Event
+viewPlayer state =
+  case state.playerState of
+    Just pstate ->
+      child PlayerEvent MidiPlayer.view $ pstate
+    _ ->
+      p $ text "player state is null"
 
 view :: State -> HTML Event
 view state =
@@ -218,6 +240,7 @@ view state =
       textarea ! taStyle ! cols "70" ! rows "15" ! value state.abc
         #! onInput (\e -> Abc (targetValue e) ) $ text ""
       viewParseError state
+      viewPlayer state
       viewCanvas state
 
 

@@ -20,6 +20,7 @@
     "purescript-functions": "^2.0.0",
     "purescript-abc-parser": "https://github.com/newlandsvalley/purescript-abc-parser.git",
     "purescript-scores": "https://github.com/newlandsvalley/purescript-scores.git",
+    "purescript-midi-player": "https://github.com/newlandsvalley/purescript-midi-player.git",
     "purescript-debug": "^2.0.0"
   },
   "devDependencies": {
