@@ -3,5 +3,6 @@
 /.pulp-cache/
 /deprecated/
 /output/
+/dist/abc-editor.js
 /.psc*
 /.psa*

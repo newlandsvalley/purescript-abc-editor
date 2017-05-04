@@ -1,16 +1,22 @@
 module App where
 
 -- import CSS.Geometry (paddingTop, paddingBottom, marginLeft, marginRight, marginTop, width)
+import Data.Midi.Player as MidiPlayer
+import VexTab.Score as VexScore
+import Audio.SoundFont (AUDIO)
+import CSS.Background (backgroundColor)
+import CSS.Color (rgb, red, lightgrey, darkgrey)
+import CSS.Display (display, block, float, floatLeft)
+import CSS.Font (color, fontSize)
+import CSS.Geometry (width, padding, margin)
+import CSS.Size (px, em)
+import CSS.TextAlign (textAlign, leftTextAlign, center)
+import Control.Monad.Aff (Aff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
-import Control.Monad.Aff (Aff)
 import Data.Abc (AbcTune)
-import Data.Abc.Parser (PositionedParseError(..), parse)
 import Data.Abc.Midi (toMidi)
-import VexTab.Score as VexScore
-import VexTab.Abc.Score (renderTune)
-import Audio.SoundFont (AUDIO)
-import Data.Midi.Player as MidiPlayer
+import Data.Abc.Parser (PositionedParseError(..), parse)
 import Data.Array (length, slice)
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..), fromMaybe)
@@ -22,16 +28,9 @@ import Pux.DOM.Events (onClick, onChange, onInput, targetValue)
 import Pux.DOM.HTML (HTML, child)
 import Pux.DOM.HTML.Attributes (style)
 import Text.Smolder.HTML (button, canvas, div, h1, input, p, span, textarea)
-import Text.Smolder.HTML.Attributes (type', id, accept, hidden, rows, cols, value)
+import Text.Smolder.HTML.Attributes (type', id, accept, className, disabled, hidden, rows, cols, value)
 import Text.Smolder.Markup (Attribute, text, (#!), (!))
-import CSS.Size (px, em)
-import CSS.Geometry (width, padding, margin)
-import CSS.Font (color, fontSize)
--- import CSS.Common (auto)
-import CSS.Background (backgroundColor)
-import CSS.Color (rgb, red)
-import CSS.Display (display, block, float, floatLeft)
-import CSS.TextAlign (textAlign, leftTextAlign, center)
+import VexTab.Abc.Score (renderTune)
 
 
 -- import Debug.Trace (trace, traceShow, traceShowM)
@@ -230,19 +229,21 @@ view state =
   div do
     h1 ! centreStyle $ text "ABC Editor"
     div ! leftPaneStyle $ do
-      span ! leftPanelLabelStyle $ text "Load an ABC file:"
-      input ! inputStyle ! type' "file" ! id "fileinput" ! accept ".abc, .txt"
-           #! onChange (const RequestFileUpload)
-      button #! onClick (const RequestFileDownload) $ text "save"
-      button #! onClick (const Reset) $ text "reset"
-    div do
+      span ! leftPanelLabelStyle $ do
+        text "Load an ABC file:"
+        input ! inputStyle ! type' "file" ! id "fileinput" ! accept ".abc, .txt"
+             #! onChange (const RequestFileUpload)
+      span ! leftPanelLabelStyle $ do
+        text "Save or reset text:"
+        button ! button1Style ! className "hoverable" #! onClick (const RequestFileDownload) $ text "save"
+        button ! button1Style ! className "hoverable" #! onClick (const Reset) $ text "reset"
+    div ! rightPaneStyle $ do
       p $ text $ fromMaybe "no file chosen" state.fileName
       textarea ! taStyle ! cols "70" ! rows "15" ! value state.abc
         #! onInput (\e -> Abc (targetValue e) ) $ text ""
       viewParseError state
       viewPlayer state
       viewCanvas state
-
 
 
 taStyle :: Attribute
@@ -290,6 +291,13 @@ leftPaneStyle =
   style do
     width (px 350.0)
     float floatLeft
+
+
+rightPaneStyle :: Attribute
+rightPaneStyle =
+  style do
+    float floatLeft
+
 
 {-
 leftPaneStyle :: forall a. Attribute a
@@ -349,7 +357,55 @@ inputStyle =
         ]
 -}
 
+
 errorHighlightStyle :: Attribute
 errorHighlightStyle =
   style do
     color red
+
+button1Style :: Attribute
+button1Style =
+  style do
+    margin (px 0.0) (px 0.0) (px 0.0) (px 10.0)
+
+{-
+    [ class "hoverable"
+    , buttonStyle isEnabled -- hasTopMargin
+    -- , onClick msg
+    , disabled (not isEnabled)
+    ]
+-}
+
+{-
+buttonStyle :: Boolean -> Attribute
+buttonStyle enabled =
+  style do
+    backgroundColor lightgrey
+    color darkgrey
+    fontSize (em 1.0)
+    margin (px 20.0) (px 0.0) (px 0.0) (px 0.0)
+-}
+
+{-
+bStyle : Bool -> Bool -> Attribute msg
+bStyle enabled hasTopMargin =
+    let
+        colour =
+            if enabled then
+                []
+            else
+                [ ( "background-color", "lightgray" )
+                , ( "color", "darkgrey" )
+                ]
+
+        textSize =
+            [ ( "font-size", "1em" ) ]
+
+        marginTop =
+            if hasTopMargin then
+                [ ( "margin-top", "20px" ) ]
+            else
+                []
+    in
+        style (colour ++ textSize ++ marginTop)
+-}
