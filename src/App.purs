@@ -15,7 +15,6 @@ import Control.Monad.Aff (Aff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
 import Data.Abc (AbcTune)
-import Data.Abc.Midi (toMidi)
 import Data.Abc.Parser (PositionedParseError(..), parse)
 import Data.Array (length, slice)
 import Data.Either (Either(..))
@@ -141,7 +140,7 @@ onChangedAbc abc state =
                 rendered <- liftEff $ renderTune tune
                 pure $ Just (VexRendered rendered)
             , do
-                pure $ Just (PlayerEvent (MidiPlayer.SetRecording (toMidi tune)))
+                pure $ Just (PlayerEvent (MidiPlayer.SetAbc tune))
             ]
 
         }

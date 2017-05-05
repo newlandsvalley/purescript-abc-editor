@@ -23,4 +23,3 @@ To Do
 * Change octave
 * Change tempo
 * Complete CSS styling
-* Optimise
