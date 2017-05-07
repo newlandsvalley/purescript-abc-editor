@@ -7,23 +7,23 @@
     "output"
   ],
   "dependencies": {
-    "purescript-prelude": "^2.1.0",
-    "purescript-console": "^2.0.0",
-    "purescript-eff": "^2.0.0",
-    "purescript-exceptions": "^2.0.0",
-    "purescript-pux": "^8.7.0",
-    "purescript-tuples": "^3.1.0",
-    "purescript-maybe": "^2.0.1",
-    "purescript-aff": "^2.0.3",
-    "purescript-either": "^2.1.0",
-    "purescript-foreign": "^3.1.0",
-    "purescript-functions": "^2.0.0",
+    "purescript-prelude": "^3.0.0",
+    "purescript-console": "^3.0.0",
+    "purescript-eff": "^3.1.0",
+    "purescript-exceptions": "^3.0.0",
+    "purescript-pux": "^9.1.0",
+    "purescript-tuples": "^4.0.0",
+    "purescript-maybe": "^3.0.0",
+    "purescript-aff": "^3.0.0",
+    "purescript-either": "^3.0.0",
+    "purescript-foreign": "^4.0.0",
+    "purescript-functions": "^3.0.0",
     "purescript-abc-parser": "https://github.com/newlandsvalley/purescript-abc-parser.git",
     "purescript-scores": "https://github.com/newlandsvalley/purescript-scores.git",
     "purescript-midi-player": "https://github.com/newlandsvalley/purescript-midi-player.git",
-    "purescript-debug": "^2.0.0"
+    "purescript-debug": "^3.0.0"
   },
   "devDependencies": {
-    "purescript-psci-support": "^2.0.0"
+    "purescript-psci-support": "^3.0.0"
   }
 }

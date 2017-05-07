@@ -11,7 +11,7 @@ import Prelude (Unit, bind)
 import Pux (CoreEffects, start)
 import Pux.Renderer.React (renderToDOM)
 
-initialiseApp :: forall e. Eff (err :: EXCEPTION | e) (Canceler e)
+initialiseApp :: forall e. Eff (exception :: EXCEPTION | e) (Canceler e)
 initialiseApp = do
   launchAff (loadPianoSoundFont "assets/soundfonts")
 

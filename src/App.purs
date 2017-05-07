@@ -14,21 +14,23 @@ import CSS.TextAlign (textAlign, leftTextAlign, center)
 import Control.Monad.Aff (Aff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
+import DOM.Node.NodeType (NodeType(..))
 import Data.Abc (AbcTune)
 import Data.Abc.Parser (PositionedParseError(..), parse)
 import Data.Array (length, slice)
-import Data.Either (Either(..))
+import Data.Either (Either(..), isLeft)
 import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Monoid (mempty)
 import Data.String (fromCharArray, toCharArray)
 import FileIO.FileIO (FILEIO, Filespec, loadTextFile, saveTextFile)
-import Prelude (bind, const, max, min, pure, ($), (#), (<>), (+), (-))
+import Prelude (bind, const, discard, max, min, pure, show, ($), (#), (<>), (+), (-))
 import Pux (EffModel, noEffects, mapEffects, mapState)
 import Pux.DOM.Events (onClick, onChange, onInput, targetValue)
 import Pux.DOM.HTML (HTML, child)
 import Pux.DOM.HTML.Attributes (style)
 import Text.Smolder.HTML (button, canvas, div, h1, input, p, span, textarea)
 import Text.Smolder.HTML.Attributes (type', id, accept, className, disabled, hidden, rows, cols, value)
-import Text.Smolder.Markup (Attribute, text, (#!), (!))
+import Text.Smolder.Markup (Attribute, text, (#!), (!), (!?))
 import VexTab.Abc.Score (renderTune)
 
 
@@ -167,6 +169,12 @@ ensureVexInitialised state =
       initialised <- liftEff initialiseVex
       pure $ Just (VexInitialised initialised)
 
+debugVex :: State -> HTML Event
+debugVex state =
+  do
+    text ("vex rendered: " <> show state.vexRendered)
+    text (" vex initialised: " <> show state.vexInitialised)
+
 -- | display a snippet of text with the error highlighted
 viewParseError :: State -> HTML Event
 viewParseError state =
@@ -203,13 +211,13 @@ viewParseError state =
               span ! errorHighlightStyle $ text (fromCharArray errorChar)
               text $ fromCharArray errorSuffix
       _ ->
-        text ""
+        mempty
 
 viewCanvas :: State -> HTML Event
 viewCanvas state =
     if (state.vexRendered) then
       div do
-        canvas ! id "vextab" $ text ""
+        canvas ! id "vextab" $ mempty
     else
       div do
         canvas ! id "vextab" ! hidden "hidden" $ text ""
@@ -223,6 +231,7 @@ viewPlayer state =
     _ ->
       p $ text "player state is null"
 
+{-}
 view :: State -> HTML Event
 view state =
   div do
@@ -243,6 +252,52 @@ view state =
       viewParseError state
       viewPlayer state
       viewCanvas state
+      debugVex state
+-}
+
+view :: State -> HTML Event
+view state =
+  let
+    isDisabled :: Boolean
+    isDisabled = isLeft state.tuneResult
+  in
+    div do
+      h1 ! centreStyle $ text "ABC Editor"
+      div ! leftPaneStyle $ do
+        span ! leftPanelLabelStyle $ do
+          text "Load an ABC file:"
+          input ! inputStyle ! type' "file" ! id "fileinput" ! accept ".abc, .txt"
+               #! onChange (const RequestFileUpload)
+        span ! leftPanelLabelStyle $ do
+          text "save or reset text:"
+          button ! button1Style ! className "hoverable" #! onClick (const RequestFileDownload) $ text "save"
+          button ! button1Style ! className "hoverable" #! onClick (const Reset) $ text "reset"
+        span ! leftPanelLabelStyle $ do
+          text "change octave:"
+          button ! button1Style ! className "hoverable" #! onClick (const NoOp) $ text "up"
+          button ! button1Style ! className "hoverable" #! onClick (const NoOp) $ text "down"
+
+          -- why can't I get !? to work???
+          -- button !? isDisabled (disabled "disabled") ! button1Style ! className "hoverable" #! onClick (const NoOp) $ text "up"
+          -- button !? isDisabled (disabled "disabled") ! button1Style ! className "hoverable" #! onClick (const NoOp) $ text "down"
+          -- button ! className "hoverable" !? isDisabled (disabled "disabled") $ mempty
+
+      div ! rightPaneStyle $ do
+        p $ text $ fromMaybe "no file chosen" state.fileName
+        textarea ! taStyle ! cols "70" ! rows "15" ! value state.abc
+          #! onInput (\e -> Abc (targetValue e) ) $ mempty
+        viewParseError state
+        viewPlayer state
+        viewCanvas state
+        -- debugVex state
+
+-- | experimental
+optDisabled :: Boolean -> Attribute
+optDisabled b =
+  if b then
+    disabled "disabled"
+  else
+    mempty
 
 
 taStyle :: Attribute
@@ -366,6 +421,7 @@ button1Style :: Attribute
 button1Style =
   style do
     margin (px 0.0) (px 0.0) (px 0.0) (px 10.0)
+    fontSize (em 1.0)
 
 {-
     [ class "hoverable"
