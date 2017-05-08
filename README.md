@@ -23,3 +23,4 @@ To Do
 * Change octave
 * Change tempo
 * Complete CSS styling
+* Cross-broweser testing

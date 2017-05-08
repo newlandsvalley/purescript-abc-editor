@@ -215,12 +215,13 @@ viewParseError state =
 
 viewCanvas :: State -> HTML Event
 viewCanvas state =
-    if (state.vexRendered) then
-      div do
-        canvas ! id "vextab" $ mempty
-    else
-      div do
-        canvas ! id "vextab" ! hidden "hidden" $ text ""
+  if (state.vexRendered) then
+    div ! centreStyle $ do
+      canvas ! id "vextab" $ mempty
+  else
+    div do
+      canvas ! id "vextab" ! hidden "hidden" $ text ""
+
 
 -- | only display the player if we have a MIDI recording
 viewPlayer :: State -> HTML Event
@@ -288,7 +289,7 @@ view state =
           #! onInput (\e -> Abc (targetValue e) ) $ mempty
         viewParseError state
         viewPlayer state
-        viewCanvas state
+      viewCanvas state
         -- debugVex state
 
 -- | experimental
@@ -329,16 +330,7 @@ centreStyle :: Attribute
 centreStyle =
   style do
     textAlign center
-
-{-
-centreStyle : Attribute msg
-centreStyle =
-    style
-        [ ( "text-align", "center" )
-        , ( "margin", "auto" )
-        ]
--}
-
+    -- margin auto
 
 leftPaneStyle :: Attribute
 leftPaneStyle =
@@ -346,25 +338,10 @@ leftPaneStyle =
     width (px 350.0)
     float floatLeft
 
-
 rightPaneStyle :: Attribute
 rightPaneStyle =
   style do
     float floatLeft
-
-
-{-
-leftPaneStyle :: forall a. Attribute a
-leftPaneStyle =
-    style
-        [ Tuple "float" "left"
-        , Tuple "width" "350px"(const Abc)
-  style do
-    margin (px 40.0) (px 0.0) (px 0.0) (px 40.0)
-    fontSize (em 1.2)
--}
-
-
 
 leftPanelLabelStyle :: Attribute
 leftPanelLabelStyle =
@@ -372,45 +349,12 @@ leftPanelLabelStyle =
       margin (40.0 # px) (px 0.0) (px 0.0) (px 40.0)
       fontSize (em 1.2)
 
-
-
-{-
-leftPanelLabelStyle : Attribute msg
-leftPanelLabelStyle =
-    style
-        [ ( "margin-left", "40px" )
-        , ( "margin-top", "40px" )
-        , ( "font-size", "1.2em" )
-        ]
--}
-
 inputStyle :: Attribute
 inputStyle =
   style do
     padding (px 10.0) (px 0.0) (px 10.0) (px 0.0)
     margin (px 0.0) (px 0.0) (px 0.0) (px 40.0)
     fontSize (em 1.0)
-
-{-}
-inputStyle :: forall a. Attribute a
-inputStyle =
-    style $ do
-      paddingTop (10.0 # px)
-      paddingBottom (10.0 # px)
-      fontSize (1.0 # em)
-      marginLeft (40.0 # px)
--}
-
-{-
-inputStyle : Attribute Msg
-inputStyle =
-    style
-        [ ( "padding", "10px 0" )
-        , ( "font-size", "1em" )
-        , ( "margin-left", "40px" )
-        ]
--}
-
 
 errorHighlightStyle :: Attribute
 errorHighlightStyle =
