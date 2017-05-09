@@ -20,7 +20,5 @@ To Do
 -----
 
 * Transposition
-* Change octave
-* Change tempo
 * Complete CSS styling
 * Cross-broweser testing

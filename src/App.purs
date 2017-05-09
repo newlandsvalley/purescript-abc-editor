@@ -22,12 +22,13 @@ import Data.Abc.Parser (PositionedParseError(..), parse)
 import Data.Array (length, slice)
 import Data.Either (Either(..), isLeft, isRight)
 import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Int (fromString)
 import Data.Monoid (mempty)
 import Data.String (fromCharArray, toCharArray)
 import FileIO.FileIO (FILEIO, Filespec, loadTextFile, saveTextFile)
-import Prelude (bind, const, discard, max, min, not, pure, show, ($), (#), (<>), (+), (-))
+import Prelude (bind, const, discard, max, min, not, pure, show, ($), (#), (<>), (+), (-), (<<<))
 import Pux (EffModel, noEffects, mapEffects, mapState)
-import Pux.DOM.Events (onClick, onChange, onInput, targetValue)
+import Pux.DOM.Events (DOMEvent, onClick, onChange, onInput, targetValue)
 import Pux.DOM.HTML (HTML, child)
 import Pux.DOM.HTML.Attributes (style)
 import Text.Smolder.HTML (button, canvas, div, h1, input, p, span, textarea)
@@ -48,6 +49,7 @@ data Event
     | VexInitialised Boolean -- is Vex initialised ?
     | VexRendered Boolean    -- is the abc rendered as a score ?
     | MoveOctave Boolean     -- true is Up one octave, false is Down
+    | SetTempo Int           -- set the tempo to the required bpm
     | PlayerEvent MidiPlayer.Event
     | Reset
 
@@ -122,6 +124,11 @@ foldp (MoveOctave isUp) state =
     newState = changeTune (Octave.move isUp) state
   in
     onChangedAbc newState.abc newState
+foldp (SetTempo bpm) state =
+  let
+    newState = changeTune (setBpm bpm) state
+  in
+    onChangedAbc newState.abc newState
 foldp (PlayerEvent e) state =
   case state.playerState of
     Just pstate ->
@@ -184,17 +191,12 @@ debugVex state =
     text ("vex rendered: " <> show state.vexRendered)
     text (" vex initialised: " <> show state.vexInitialised)
 
--- | move the octave up or down
-{-}
-moveOctave :: Boolean -> State -> State
-moveOctave isUp =
-  changeTune (Octave.move isUp)
-  -}
-
 -- | change the tempo
+{-}
 changeTempo :: Int -> State -> State
 changeTempo bpm =
   changeTune (setBpm bpm)
+  -}
 
 -- | apply a function to change the ABC tune and save the state
 changeTune :: (AbcTune -> AbcTune) -> State -> State
@@ -270,27 +272,18 @@ tempoSlider :: State -> HTML Event
 tempoSlider state =
   div do
     (input !? isDisabled) (At.disabled "disabled") ! sliderStyle ! At.type' "range" ! At.min "10" ! At.max "300" ! At.value (show bpm)
+       -- #! (\e -> SetTempo ((toIntTempo >>> targetValue) e) )
+       #! onInput (\e -> SetTempo (targetTempo e) )
   where
     bpm =  case state.tuneResult of
       Right tune -> getBpm tune
-      _ -> 120
+      _ -> defaultTempo.bpm -- 120
     isDisabled = isLeft state.tuneResult
 
-
-{-
-  case state.tuneResult of
-    Right tune ->
-      let
-        bpm = getBpm tune
-        -- playing = state.playerState.playing
-      in
-        div do
-          -- input ! sliderStyle ! At.type' "range" ! At.min "10"
-          input ! sliderStyle ! At.type' "range" ! At.min "10" ! At.max "300" ! At.value (show bpm)
-    _ ->
-      mempty
-      -}
-
+-- | get the tempo from the DOM event as an integer defaukting to 120
+targetTempo :: DOMEvent-> Int
+targetTempo s =
+  fromMaybe defaultTempo.bpm $ (fromString <<< targetValue) s
 
 -- | is the player playing ?
 isPlaying :: State -> Boolean
