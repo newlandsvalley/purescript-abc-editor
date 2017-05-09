@@ -17,9 +17,10 @@ import Control.Monad.Eff.Class (liftEff)
 import Data.Abc (AbcTune)
 import Data.Abc.Canonical (fromTune)
 import Data.Abc.Octave as Octave
+import Data.Abc.Tempo (defaultTempo, getBpm, setBpm)
 import Data.Abc.Parser (PositionedParseError(..), parse)
 import Data.Array (length, slice)
-import Data.Either (Either(..), isRight)
+import Data.Either (Either(..), isLeft, isRight)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Monoid (mempty)
 import Data.String (fromCharArray, toCharArray)
@@ -30,7 +31,8 @@ import Pux.DOM.Events (onClick, onChange, onInput, targetValue)
 import Pux.DOM.HTML (HTML, child)
 import Pux.DOM.HTML.Attributes (style)
 import Text.Smolder.HTML (button, canvas, div, h1, input, p, span, textarea)
-import Text.Smolder.HTML.Attributes (type', id, accept, className, disabled, hidden, rows, cols, value)
+-- import Text.Smolder.HTML.Attributes (type', id, accept, className, disabled, hidden, rows, cols, value)
+import Text.Smolder.HTML.Attributes as At
 import Text.Smolder.Markup (Attribute, text, (#!), (!), (!?))
 import VexTab.Abc.Score (renderTune)
 
@@ -67,7 +69,7 @@ initialiseVex =
       { canvasDivId : "#vextab"
       , canvasX : 10
       , canvasY : 10
-      , canvasWidth : 1200
+      , canvasWidth : 1300
       , scale : 0.8
       }
    in
@@ -117,7 +119,7 @@ foldp (VexRendered rendered) state =
   noEffects $ state { vexRendered = rendered }
 foldp (MoveOctave isUp) state =
   let
-    newState = moveOctave isUp state
+    newState = changeTune (Octave.move isUp) state
   in
     onChangedAbc newState.abc newState
 foldp (PlayerEvent e) state =
@@ -182,19 +184,30 @@ debugVex state =
     text ("vex rendered: " <> show state.vexRendered)
     text (" vex initialised: " <> show state.vexInitialised)
 
+-- | move the octave up or down
+{-}
 moveOctave :: Boolean -> State -> State
-moveOctave isUp state =
+moveOctave isUp =
+  changeTune (Octave.move isUp)
+  -}
+
+-- | change the tempo
+changeTempo :: Int -> State -> State
+changeTempo bpm =
+  changeTune (setBpm bpm)
+
+-- | apply a function to change the ABC tune and save the state
+changeTune :: (AbcTune -> AbcTune) -> State -> State
+changeTune f state =
   case state.tuneResult of
     Right tune ->
       let
-        newTune = Octave.move isUp tune
-        newAbc =  fromTune newTune
+        newTune = f tune
+        newAbc = fromTune newTune
       in
         state {  abc = newAbc, tuneResult = (Right newTune) }
     _ ->
       state
-
-
 
 -- | display a snippet of text with the error highlighted
 viewParseError :: State -> HTML Event
@@ -238,10 +251,10 @@ viewCanvas :: State -> HTML Event
 viewCanvas state =
   if (state.vexRendered) then
     div ! centreStyle $ do
-      canvas ! id "vextab" $ mempty
+      canvas ! At.id "vextab" $ mempty
   else
     div do
-      canvas ! id "vextab" ! hidden "hidden" $ text ""
+      canvas ! At.id "vextab" ! At.hidden "hidden" $ text ""
 
 -- | only display the player if we have a MIDI recording
 viewPlayer :: State -> HTML Event
@@ -250,7 +263,41 @@ viewPlayer state =
     Just pstate ->
       child PlayerEvent MidiPlayer.view $ pstate
     _ ->
-      p $ text "player state is null"
+      mempty
+
+
+tempoSlider :: State -> HTML Event
+tempoSlider state =
+  div do
+    (input !? isDisabled) (At.disabled "disabled") ! sliderStyle ! At.type' "range" ! At.min "10" ! At.max "300" ! At.value (show bpm)
+  where
+    bpm =  case state.tuneResult of
+      Right tune -> getBpm tune
+      _ -> 120
+    isDisabled = isLeft state.tuneResult
+
+
+{-
+  case state.tuneResult of
+    Right tune ->
+      let
+        bpm = getBpm tune
+        -- playing = state.playerState.playing
+      in
+        div do
+          -- input ! sliderStyle ! At.type' "range" ! At.min "10"
+          input ! sliderStyle ! At.type' "range" ! At.min "10" ! At.max "300" ! At.value (show bpm)
+    _ ->
+      mempty
+      -}
+
+
+-- | is the player playing ?
+isPlaying :: State -> Boolean
+isPlaying state =
+  case state.playerState of
+    Just ps -> ps.playing
+    _ -> false
 
 view :: State -> HTML Event
 view state =
@@ -263,26 +310,30 @@ view state =
       div ! leftPaneStyle $ do
         span ! leftPanelLabelStyle $ do
           text "Load an ABC file:"
-          input ! inputStyle ! type' "file" ! id "fileinput" ! accept ".abc, .txt"
+          input ! inputStyle ! At.type' "file" ! At.id "fileinput" ! At.accept ".abc, .txt"
                #! onChange (const RequestFileUpload)
-        span ! leftPanelLabelStyle $ do
-          text "save or reset text:"
-          button ! (button1Style true) ! className "hoverable" #! onClick (const RequestFileDownload) $ text "save"
-          button ! (button1Style true) ! className "hoverable" #! onClick (const Reset) $ text "reset"
-        span ! leftPanelLabelStyle $ do
-          text "change octave:"
-          (button !? (not isEnabled)) (disabled "disabled") ! (button1Style isEnabled) ! className "hoverable"
+        div ! leftPanelLabelStyle  $ do
+          text  "save or reset ABC text:"
+          button ! (button1Style true) ! At.className "hoverable" #! onClick (const RequestFileDownload) $ text "save"
+          button ! (button1Style true) ! At.className "hoverable" #! onClick (const Reset) $ text "reset"
+        div ! leftPanelLabelStyle $ do
+          text  "change octave:"
+          (button !? (not isEnabled)) (At.disabled "disabled") ! (button1Style isEnabled) ! At.className "hoverable"
                #! onClick (const $ MoveOctave true) $ text "up"
-          (button !? (not isEnabled)) (disabled "disabled") ! (button1Style isEnabled) ! className "hoverable"
+          (button !? (not isEnabled)) (At.disabled "disabled") ! (button1Style isEnabled) ! At.className "hoverable"
                #! onClick (const $ MoveOctave false) $ text "down"
+        div ! leftPanelLabelStyle $ do
+          text "change tempo:"
+          tempoSlider state
+        div ! leftPanelLabelStyle $ do
+          viewPlayer state
 
       -- the editable text on the right
       div ! rightPaneStyle $ do
         p $ text $ fromMaybe "no file chosen" state.fileName
-        textarea ! taStyle ! cols "70" ! rows "15" ! value state.abc
+        textarea ! taStyle ! At.cols "70" ! At.rows "15" ! At.value state.abc
           #! onInput (\e -> Abc (targetValue e) ) $ mempty
         viewParseError state
-        viewPlayer state
       -- the score
       viewCanvas state
         -- debugVex state
@@ -323,7 +374,7 @@ centreStyle =
 leftPaneStyle :: Attribute
 leftPaneStyle =
   style do
-    width (px 350.0)
+    width (px 420.0)
     float floatLeft
 
 rightPaneStyle :: Attribute
@@ -334,7 +385,7 @@ rightPaneStyle =
 leftPanelLabelStyle :: Attribute
 leftPanelLabelStyle =
     style $ do
-      margin (40.0 # px) (px 0.0) (px 0.0) (px 40.0)
+      margin (10.0 # px) (px 0.0) (px 10.0) (px 40.0)
       fontSize (em 1.2)
 
 inputStyle :: Attribute
@@ -362,8 +413,11 @@ button1Style enabled =
       backgroundColor lightgrey
       color darkgrey
 
-
-
+sliderStyle :: Attribute
+sliderStyle =
+  style do
+    width (px 150.0)
+    margin (px 0.0) (px 0.0) (px 0.0) (px 40.0)
 
 {-
 buttonStyle :: Boolean -> Attribute
