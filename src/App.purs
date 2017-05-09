@@ -14,16 +14,17 @@ import CSS.TextAlign (textAlign, leftTextAlign, center)
 import Control.Monad.Aff (Aff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
-import DOM.Node.NodeType (NodeType(..))
 import Data.Abc (AbcTune)
+import Data.Abc.Canonical (fromTune)
+import Data.Abc.Octave as Octave
 import Data.Abc.Parser (PositionedParseError(..), parse)
 import Data.Array (length, slice)
-import Data.Either (Either(..), isLeft)
+import Data.Either (Either(..), isRight)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Monoid (mempty)
 import Data.String (fromCharArray, toCharArray)
 import FileIO.FileIO (FILEIO, Filespec, loadTextFile, saveTextFile)
-import Prelude (bind, const, discard, max, min, pure, show, ($), (#), (<>), (+), (-))
+import Prelude (bind, const, discard, max, min, not, pure, show, ($), (#), (<>), (+), (-))
 import Pux (EffModel, noEffects, mapEffects, mapState)
 import Pux.DOM.Events (onClick, onChange, onInput, targetValue)
 import Pux.DOM.HTML (HTML, child)
@@ -44,6 +45,7 @@ data Event
     | FileLoaded Filespec
     | VexInitialised Boolean -- is Vex initialised ?
     | VexRendered Boolean    -- is the abc rendered as a score ?
+    | MoveOctave Boolean     -- true is Up one octave, false is Down
     | PlayerEvent MidiPlayer.Event
     | Reset
 
@@ -113,6 +115,11 @@ foldp (VexInitialised initialised) state =
   noEffects $ state { vexInitialised = initialised }
 foldp (VexRendered rendered) state =
   noEffects $ state { vexRendered = rendered }
+foldp (MoveOctave isUp) state =
+  let
+    newState = moveOctave isUp state
+  in
+    onChangedAbc newState.abc newState
 foldp (PlayerEvent e) state =
   case state.playerState of
     Just pstate ->
@@ -175,6 +182,20 @@ debugVex state =
     text ("vex rendered: " <> show state.vexRendered)
     text (" vex initialised: " <> show state.vexInitialised)
 
+moveOctave :: Boolean -> State -> State
+moveOctave isUp state =
+  case state.tuneResult of
+    Right tune ->
+      let
+        newTune = Octave.move isUp tune
+        newAbc =  fromTune newTune
+      in
+        state {  abc = newAbc, tuneResult = (Right newTune) }
+    _ ->
+      state
+
+
+
 -- | display a snippet of text with the error highlighted
 viewParseError :: State -> HTML Event
 viewParseError state =
@@ -222,7 +243,6 @@ viewCanvas state =
     div do
       canvas ! id "vextab" ! hidden "hidden" $ text ""
 
-
 -- | only display the player if we have a MIDI recording
 viewPlayer :: State -> HTML Event
 viewPlayer state =
@@ -232,38 +252,14 @@ viewPlayer state =
     _ ->
       p $ text "player state is null"
 
-{-}
-view :: State -> HTML Event
-view state =
-  div do
-    h1 ! centreStyle $ text "ABC Editor"
-    div ! leftPaneStyle $ do
-      span ! leftPanelLabelStyle $ do
-        text "Load an ABC file:"
-        input ! inputStyle ! type' "file" ! id "fileinput" ! accept ".abc, .txt"
-             #! onChange (const RequestFileUpload)
-      span ! leftPanelLabelStyle $ do
-        text "Save or reset text:"
-        button ! button1Style ! className "hoverable" #! onClick (const RequestFileDownload) $ text "save"
-        button ! button1Style ! className "hoverable" #! onClick (const Reset) $ text "reset"
-    div ! rightPaneStyle $ do
-      p $ text $ fromMaybe "no file chosen" state.fileName
-      textarea ! taStyle ! cols "70" ! rows "15" ! value state.abc
-        #! onInput (\e -> Abc (targetValue e) ) $ text ""
-      viewParseError state
-      viewPlayer state
-      viewCanvas state
-      debugVex state
--}
-
 view :: State -> HTML Event
 view state =
   let
-    isDisabled :: Boolean
-    isDisabled = isLeft state.tuneResult
+    isEnabled = isRight state.tuneResult
   in
     div do
       h1 ! centreStyle $ text "ABC Editor"
+      -- the options and buttons on the left
       div ! leftPaneStyle $ do
         span ! leftPanelLabelStyle $ do
           text "Load an ABC file:"
@@ -271,34 +267,26 @@ view state =
                #! onChange (const RequestFileUpload)
         span ! leftPanelLabelStyle $ do
           text "save or reset text:"
-          button ! button1Style ! className "hoverable" #! onClick (const RequestFileDownload) $ text "save"
-          button ! button1Style ! className "hoverable" #! onClick (const Reset) $ text "reset"
+          button ! (button1Style true) ! className "hoverable" #! onClick (const RequestFileDownload) $ text "save"
+          button ! (button1Style true) ! className "hoverable" #! onClick (const Reset) $ text "reset"
         span ! leftPanelLabelStyle $ do
           text "change octave:"
-          button ! button1Style ! className "hoverable" #! onClick (const NoOp) $ text "up"
-          button ! button1Style ! className "hoverable" #! onClick (const NoOp) $ text "down"
+          (button !? (not isEnabled)) (disabled "disabled") ! (button1Style isEnabled) ! className "hoverable"
+               #! onClick (const $ MoveOctave true) $ text "up"
+          (button !? (not isEnabled)) (disabled "disabled") ! (button1Style isEnabled) ! className "hoverable"
+               #! onClick (const $ MoveOctave false) $ text "down"
 
-          -- why can't I get !? to work???
-          -- button !? isDisabled (disabled "disabled") ! button1Style ! className "hoverable" #! onClick (const NoOp) $ text "up"
-          -- button !? isDisabled (disabled "disabled") ! button1Style ! className "hoverable" #! onClick (const NoOp) $ text "down"
-          -- button ! className "hoverable" !? isDisabled (disabled "disabled") $ mempty
-
+      -- the editable text on the right
       div ! rightPaneStyle $ do
         p $ text $ fromMaybe "no file chosen" state.fileName
         textarea ! taStyle ! cols "70" ! rows "15" ! value state.abc
           #! onInput (\e -> Abc (targetValue e) ) $ mempty
         viewParseError state
         viewPlayer state
+      -- the score
       viewCanvas state
         -- debugVex state
 
--- | experimental
-optDisabled :: Boolean -> Attribute
-optDisabled b =
-  if b then
-    disabled "disabled"
-  else
-    mempty
 
 
 taStyle :: Attribute
@@ -361,19 +349,21 @@ errorHighlightStyle =
   style do
     color red
 
-button1Style :: Attribute
-button1Style =
-  style do
-    margin (px 0.0) (px 0.0) (px 0.0) (px 10.0)
-    fontSize (em 1.0)
+button1Style :: Boolean -> Attribute
+button1Style enabled =
+  if enabled then
+    style do
+      margin (px 0.0) (px 0.0) (px 0.0) (px 10.0)
+      fontSize (em 1.0)
+  else
+    style do
+      margin (px 0.0) (px 0.0) (px 0.0) (px 10.0)
+      fontSize (em 1.0)
+      backgroundColor lightgrey
+      color darkgrey
 
-{-
-    [ class "hoverable"
-    , buttonStyle isEnabled -- hasTopMargin
-    -- , onClick msg
-    , disabled (not isEnabled)
-    ]
--}
+
+
 
 {-
 buttonStyle :: Boolean -> Attribute
