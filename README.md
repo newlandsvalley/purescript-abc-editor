@@ -4,7 +4,7 @@ purescript-abc-editor
 WORK IN PROGRESS
 ----------------
 
-This is intended eventually to be a port of the Elm AbcEditorController project. At the moment it allows you to edit ABC text and to save or reload it.  If the ABC is valid, you can see the score and play the tune, otherwise it displays an error.
+This is an editor for musical score written in the ABC notation. It allows you to edit ABC text and to save or reload it.  If the ABC is valid, you can see the score and play the tune, otherwise it displays an error.  You can also shift the octave, transpose or alter the tempo.
 
 Building
 --------
@@ -21,4 +21,4 @@ To Do
 
 * Transposition
 * Complete CSS styling
-* Cross-broweser testing
+* Cross-browser testing

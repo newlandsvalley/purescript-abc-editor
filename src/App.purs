@@ -14,10 +14,11 @@ import CSS.TextAlign (textAlign, leftTextAlign, center)
 import Control.Monad.Aff (Aff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
-import Data.Abc (AbcTune)
+import Data.Abc (AbcTune, ModifiedKeySignature, KeyAccidental)
 import Data.Abc.Canonical (fromTune)
 import Data.Abc.Octave as Octave
 import Data.Abc.Tempo (defaultTempo, getBpm, setBpm)
+import Data.Abc.Transposition (transposeTo)
 import Data.Abc.Parser (PositionedParseError(..), parse)
 import Data.Array (length, slice)
 import Data.Either (Either(..), isLeft, isRight)
@@ -197,6 +198,11 @@ changeTempo :: Int -> State -> State
 changeTempo bpm =
   changeTune (setBpm bpm)
   -}
+
+-- | transpose
+transposeTune :: KeyAccidental -> State -> State
+transposeTune ka =
+  changeTune (transposeTo ka)
 
 -- | apply a function to change the ABC tune and save the state
 changeTune :: (AbcTune -> AbcTune) -> State -> State
