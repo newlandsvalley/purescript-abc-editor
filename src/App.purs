@@ -14,7 +14,7 @@ import CSS.TextAlign (textAlign, leftTextAlign, center)
 import Control.Monad.Aff (Aff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
-import Data.Abc (AbcTune, ModifiedKeySignature, Mode(..), PitchClass(..))
+import Data.Abc (AbcTune, ModifiedKeySignature, Mode(..), PitchClass(..), Accidental(..))
 import Data.Abc.Canonical (fromTune)
 import Data.Abc.Octave as Octave
 import Data.Abc.Tempo (defaultTempo, getBpm, setBpm)
@@ -306,7 +306,7 @@ transpositionMenu state =
   let
     cMajor :: ModifiedKeySignature
     cMajor =
-       { keySignature:  { pitchClass: C, accidental: Nothing, mode: Major }, modifications: Nil }
+       { keySignature:  { pitchClass: C, accidental: Natural, mode: Major }, modifications: Nil }
   in
     case state.tuneResult of
       Right tune ->
