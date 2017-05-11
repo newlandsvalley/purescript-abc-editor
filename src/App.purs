@@ -14,25 +14,29 @@ import CSS.TextAlign (textAlign, leftTextAlign, center)
 import Control.Monad.Aff (Aff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
-import Data.Abc (AbcTune, ModifiedKeySignature, KeyAccidental)
+import Data.Abc (AbcTune, ModifiedKeySignature, Mode(..), PitchClass(..))
 import Data.Abc.Canonical (fromTune)
 import Data.Abc.Octave as Octave
 import Data.Abc.Tempo (defaultTempo, getBpm, setBpm)
 import Data.Abc.Transposition (transposeTo)
-import Data.Abc.Parser (PositionedParseError(..), parse)
+import Data.Abc.Accidentals as Accidentals
+import Data.Abc.Notation (getKeySig)
+import Data.Abc.Parser (PositionedParseError(..), parse, parseKeySignature)
 import Data.Array (length, slice)
 import Data.Either (Either(..), isLeft, isRight)
+import Data.List (List(..))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Int (fromString)
 import Data.Monoid (mempty)
 import Data.String (fromCharArray, toCharArray)
+import View.Transposition
 import FileIO.FileIO (FILEIO, Filespec, loadTextFile, saveTextFile)
-import Prelude (bind, const, discard, max, min, not, pure, show, ($), (#), (<>), (+), (-), (<<<))
+import Prelude (bind, const, discard, id, max, min, not, pure, show, ($), (#), (<>), (+), (-), (<<<))
 import Pux (EffModel, noEffects, mapEffects, mapState)
 import Pux.DOM.Events (DOMEvent, onClick, onChange, onInput, targetValue)
 import Pux.DOM.HTML (HTML, child)
 import Pux.DOM.HTML.Attributes (style)
-import Text.Smolder.HTML (button, canvas, div, h1, input, p, span, textarea)
+import Text.Smolder.HTML (button, canvas, div, h1, input, p, span, select, textarea)
 -- import Text.Smolder.HTML.Attributes (type', id, accept, className, disabled, hidden, rows, cols, value)
 import Text.Smolder.HTML.Attributes as At
 import Text.Smolder.Markup (Attribute, text, (#!), (!), (!?))
@@ -51,6 +55,7 @@ data Event
     | VexRendered Boolean    -- is the abc rendered as a score ?
     | MoveOctave Boolean     -- true is Up one octave, false is Down
     | SetTempo Int           -- set the tempo to the required bpm
+    | Transpose String       -- transpose to a new key
     | PlayerEvent MidiPlayer.Event
     | Reset
 
@@ -130,6 +135,11 @@ foldp (SetTempo bpm) state =
     newState = changeTune (setBpm bpm) state
   in
     onChangedAbc newState.abc newState
+foldp (Transpose newKey) state =
+  let
+    newState = transposeTune newKey state
+  in
+    onChangedAbc newState.abc newState
 foldp (PlayerEvent e) state =
   case state.playerState of
     Just pstate ->
@@ -200,9 +210,16 @@ changeTempo bpm =
   -}
 
 -- | transpose
-transposeTune :: KeyAccidental -> State -> State
-transposeTune ka =
-  changeTune (transposeTo ka)
+transposeTune :: String -> State -> State
+transposeTune s  =
+  case parseKeySignature s of
+    Right mks ->
+      let
+        ka = Accidentals.fromKeySig mks.keySignature
+      in
+        changeTune (transposeTo ka)
+    Left _ ->
+      id
 
 -- | apply a function to change the ABC tune and save the state
 changeTune :: (AbcTune -> AbcTune) -> State -> State
@@ -273,18 +290,36 @@ viewPlayer state =
     _ ->
       mempty
 
-
 tempoSlider :: State -> HTML Event
 tempoSlider state =
-  div do
-    (input !? isDisabled) (At.disabled "disabled") ! sliderStyle ! At.type' "range" ! At.min "10" ! At.max "300" ! At.value (show bpm)
-       -- #! (\e -> SetTempo ((toIntTempo >>> targetValue) e) )
-       #! onInput (\e -> SetTempo (targetTempo e) )
-  where
-    bpm =  case state.tuneResult of
-      Right tune -> getBpm tune
-      _ -> defaultTempo.bpm -- 120
-    isDisabled = isLeft state.tuneResult
+  (input !? isDisabled) (At.disabled "disabled") ! sliderStyle ! At.type' "range" ! At.min "10" ! At.max "300" ! At.value (show bpm)
+        -- #! (\e -> SetTempo ((toIntTempo >>> targetValue) e) )
+        #! onInput (\e -> SetTempo (targetTempo e) )
+    where
+      bpm =  case state.tuneResult of
+        Right tune -> getBpm tune
+        _ -> defaultTempo.bpm -- 120
+      isDisabled = isLeft state.tuneResult
+
+transpositionMenu :: State -> HTML Event
+transpositionMenu state =
+  let
+    cMajor :: ModifiedKeySignature
+    cMajor =
+       { keySignature:  { pitchClass: C, accidental: Nothing, mode: Major }, modifications: Nil }
+  in
+    case state.tuneResult of
+      Right tune ->
+        let
+          mks = fromMaybe cMajor $ getKeySig tune
+        in
+          do
+            select #! onChange (\e -> Transpose (targetValue e) )
+              $ (keyMenuOptions mks.keySignature)
+      _ ->
+        do
+          select ! At.disabled "disabled" #! onChange (const NoOp )
+            $ (keyMenuOptions cMajor.keySignature)
 
 -- | get the tempo from the DOM event as an integer defaukting to 120
 targetTempo :: DOMEvent-> Int
@@ -322,6 +357,9 @@ view state =
           (button !? (not isEnabled)) (At.disabled "disabled") ! (button1Style isEnabled) ! At.className "hoverable"
                #! onClick (const $ MoveOctave false) $ text "down"
         div ! leftPanelLabelStyle $ do
+          text "transpose to: "
+          transpositionMenu state
+        div ! leftPanelLabelStyle $ do
           text "change tempo:"
           tempoSlider state
         div ! leftPanelLabelStyle $ do
@@ -350,19 +388,6 @@ taStyle =
       display block
       -- fontFamily [ "monospace" ]
       -- align center
-
-{-}
-        [ ( "padding", "10px 0" )
-        , ( "font-size", "1.5em" )
-        , ( "text-align", "left" )
-        , ( "align", "center" )
-        , ( "display", "block" )
-        , ( "margin-left", "auto" )
-        , ( "margin-right", "auto" )
-        , ( "background-color", "#f3f6c6" )
-        , ( "font-family", "monospace" )
-        ]
-    -}
 
 centreStyle :: Attribute
 centreStyle =
@@ -417,37 +442,3 @@ sliderStyle =
   style do
     width (px 150.0)
     margin (px 0.0) (px 0.0) (px 0.0) (px 40.0)
-
-{-
-buttonStyle :: Boolean -> Attribute
-buttonStyle enabled =
-  style do
-    backgroundColor lightgrey
-    color darkgrey
-    fontSize (em 1.0)
-    margin (px 20.0) (px 0.0) (px 0.0) (px 0.0)
--}
-
-{-
-bStyle : Bool -> Bool -> Attribute msg
-bStyle enabled hasTopMargin =
-    let
-        colour =
-            if enabled then
-                []
-            else
-                [ ( "background-color", "lightgray" )
-                , ( "color", "darkgrey" )
-                ]
-
-        textSize =
-            [ ( "font-size", "1em" ) ]
-
-        marginTop =
-            if hasTopMargin then
-                [ ( "margin-top", "20px" ) ]
-            else
-                []
-    in
-        style (colour ++ textSize ++ marginTop)
--}

@@ -19,6 +19,5 @@ Then navigate to dist/index.html.
 To Do
 -----
 
-* Transposition
 * Complete CSS styling
 * Cross-browser testing
