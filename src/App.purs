@@ -4,13 +4,6 @@ module App where
 import Data.Midi.Player as MidiPlayer
 import VexTab.Score as VexScore
 import Audio.SoundFont (AUDIO)
-import CSS.Background (backgroundColor)
-import CSS.Color (rgb, red, lightgrey, darkgrey)
-import CSS.Display (display, block, float, floatLeft)
-import CSS.Font (color, fontSize)
-import CSS.Geometry (width, padding, margin)
-import CSS.Size (px, em)
-import CSS.TextAlign (textAlign, leftTextAlign, center)
 import Control.Monad.Aff (Aff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
@@ -24,22 +17,21 @@ import Data.Abc.Notation (getKeySig)
 import Data.Abc.Parser (PositionedParseError(..), parse, parseKeySignature)
 import Data.Array (length, slice)
 import Data.Either (Either(..), isLeft, isRight)
-import Data.List (List(..))
+import Data.List as List
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Int (fromString)
 import Data.Monoid (mempty)
 import Data.String (fromCharArray, toCharArray)
-import View.Transposition
+import View.Transposition (keyMenuOptions)
+import View.CSS
 import FileIO.FileIO (FILEIO, Filespec, loadTextFile, saveTextFile)
 import Prelude (bind, const, discard, id, max, min, not, pure, show, ($), (#), (<>), (+), (-), (<<<))
 import Pux (EffModel, noEffects, mapEffects, mapState)
 import Pux.DOM.Events (DOMEvent, onClick, onChange, onInput, targetValue)
 import Pux.DOM.HTML (HTML, child)
-import Pux.DOM.HTML.Attributes (style)
 import Text.Smolder.HTML (button, canvas, div, h1, input, p, span, select, textarea)
--- import Text.Smolder.HTML.Attributes (type', id, accept, className, disabled, hidden, rows, cols, value)
 import Text.Smolder.HTML.Attributes as At
-import Text.Smolder.Markup (Attribute, text, (#!), (!), (!?))
+import Text.Smolder.Markup (text, (#!), (!), (!?))
 import VexTab.Abc.Score (renderTune)
 
 
@@ -88,7 +80,7 @@ initialState :: State
 initialState = {
     abc : ""
   , fileName : Nothing
-  , tuneResult : Left (PositionedParseError { pos : 0, error : "not started" })
+  , tuneResult : Left (PositionedParseError { pos : 0, error : "" })
   , vexInitialised : false    -- we initialise on first reference
   , vexRendered : false
   , playerState : Nothing
@@ -202,12 +194,16 @@ debugVex state =
     text ("vex rendered: " <> show state.vexRendered)
     text (" vex initialised: " <> show state.vexInitialised)
 
--- | change the tempo
-{-}
-changeTempo :: Int -> State -> State
-changeTempo bpm =
-  changeTune (setBpm bpm)
-  -}
+
+debugPlayer :: State -> HTML Event
+debugPlayer state =
+  case state.playerState of
+    Nothing ->
+      do
+        text ("no player state")
+    Just pstate ->
+      do
+       text ("player melody size: " <> (show $ length pstate.melody))
 
 -- | transpose
 transposeTune :: String -> State -> State
@@ -248,19 +244,14 @@ viewParseError state =
           -- display a prefix of 5 characters before the error (if they're there) and a suffix of 5 after
           startPhrase =
             max (pe.pos - textRange) 0
-
           errorPrefix =
             slice startPhrase pe.pos txt
-
           startSuffix =
             min (pe.pos + 1) (length txt)
-
           endSuffix =
             min (pe.pos + textRange + 1) (length txt)
-
           errorSuffix =
             slice startSuffix endSuffix txt
-
           errorChar =
             slice pe.pos (pe.pos + 1) txt
         in
@@ -306,7 +297,7 @@ transpositionMenu state =
   let
     cMajor :: ModifiedKeySignature
     cMajor =
-       { keySignature:  { pitchClass: C, accidental: Natural, mode: Major }, modifications: Nil }
+       { keySignature:  { pitchClass: C, accidental: Natural, mode: Major }, modifications: List.Nil }
   in
     case state.tuneResult of
       Right tune ->
@@ -314,11 +305,11 @@ transpositionMenu state =
           mks = fromMaybe cMajor $ getKeySig tune
         in
           do
-            select #! onChange (\e -> Transpose (targetValue e) )
+            select ! selectionStyle #! onChange (\e -> Transpose (targetValue e) )
               $ (keyMenuOptions mks.keySignature)
       _ ->
         do
-          select ! At.disabled "disabled" #! onChange (const NoOp )
+          select ! selectionStyle ! At.disabled "disabled" #! onChange (const NoOp )
             $ (keyMenuOptions cMajor.keySignature)
 
 -- | get the tempo from the DOM event as an integer defaukting to 120
@@ -342,103 +333,38 @@ view state =
       h1 ! centreStyle $ text "ABC Editor"
       -- the options and buttons on the left
       div ! leftPaneStyle $ do
-        span ! leftPanelLabelStyle $ do
-          text "Load an ABC file:"
+        div ! initialLabelStyle $ do
+          text "load an ABC file:"
+        div ! leftPanelComponentStyle $ do
           input ! inputStyle ! At.type' "file" ! At.id "fileinput" ! At.accept ".abc, .txt"
                #! onChange (const RequestFileUpload)
-        div ! leftPanelLabelStyle  $ do
+        div ! leftPanelComponentStyle  $ do
           text  "save or reset ABC text:"
-          button ! (button1Style true) ! At.className "hoverable" #! onClick (const RequestFileDownload) $ text "save"
-          button ! (button1Style true) ! At.className "hoverable" #! onClick (const Reset) $ text "reset"
-        div ! leftPanelLabelStyle $ do
+          button ! (buttonStyle true) ! At.className "hoverable" #! onClick (const RequestFileDownload) $ text "save"
+          button ! (buttonStyle true) ! At.className "hoverable" #! onClick (const Reset) $ text "reset"
+        div ! leftPanelComponentStyle $ do
           text  "change octave:"
-          (button !? (not isEnabled)) (At.disabled "disabled") ! (button1Style isEnabled) ! At.className "hoverable"
+          (button !? (not isEnabled)) (At.disabled "disabled") ! (buttonStyle isEnabled) ! At.className "hoverable"
                #! onClick (const $ MoveOctave true) $ text "up"
-          (button !? (not isEnabled)) (At.disabled "disabled") ! (button1Style isEnabled) ! At.className "hoverable"
+          (button !? (not isEnabled)) (At.disabled "disabled") ! (buttonStyle isEnabled) ! At.className "hoverable"
                #! onClick (const $ MoveOctave false) $ text "down"
-        div ! leftPanelLabelStyle $ do
+        div ! leftPanelComponentStyle $ do
           text "transpose to: "
           transpositionMenu state
-        div ! leftPanelLabelStyle $ do
+        div ! leftPanelComponentStyle $ do
           text "change tempo:"
           tempoSlider state
-        div ! leftPanelLabelStyle $ do
+        div ! leftPanelComponentStyle $ do
           viewPlayer state
+        div ! leftPanelComponentStyle $ do
+          debugPlayer state
 
       -- the editable text on the right
       div ! rightPaneStyle $ do
-        p $ text $ fromMaybe "no file chosen" state.fileName
+        -- p $ text $ fromMaybe "no file chosen" state.fileName
         textarea ! taStyle ! At.cols "70" ! At.rows "15" ! At.value state.abc
           #! onInput (\e -> Abc (targetValue e) ) $ mempty
         viewParseError state
       -- the score
       viewCanvas state
         -- debugVex state
-
-
-
-taStyle :: Attribute
-taStyle =
-    style do
-      padding (px 10.0) (px 0.0) (px 10.0) (px 0.0)
-      fontSize (em 1.5)
-      backgroundColor (rgb 243 246 198)
-      textAlign leftTextAlign
-      margin (px 0.0) (px 2.0) (px 0.0) (px 2.0)
-      display block
-      -- fontFamily [ "monospace" ]
-      -- align center
-
-centreStyle :: Attribute
-centreStyle =
-  style do
-    textAlign center
-    -- margin auto
-
-leftPaneStyle :: Attribute
-leftPaneStyle =
-  style do
-    width (px 420.0)
-    float floatLeft
-
-rightPaneStyle :: Attribute
-rightPaneStyle =
-  style do
-    float floatLeft
-
-leftPanelLabelStyle :: Attribute
-leftPanelLabelStyle =
-    style $ do
-      margin (10.0 # px) (px 0.0) (px 10.0) (px 40.0)
-      fontSize (em 1.2)
-
-inputStyle :: Attribute
-inputStyle =
-  style do
-    padding (px 10.0) (px 0.0) (px 10.0) (px 0.0)
-    margin (px 0.0) (px 0.0) (px 0.0) (px 40.0)
-    fontSize (em 1.0)
-
-errorHighlightStyle :: Attribute
-errorHighlightStyle =
-  style do
-    color red
-
-button1Style :: Boolean -> Attribute
-button1Style enabled =
-  if enabled then
-    style do
-      margin (px 0.0) (px 0.0) (px 0.0) (px 10.0)
-      fontSize (em 1.0)
-  else
-    style do
-      margin (px 0.0) (px 0.0) (px 0.0) (px 10.0)
-      fontSize (em 1.0)
-      backgroundColor lightgrey
-      color darkgrey
-
-sliderStyle :: Attribute
-sliderStyle =
-  style do
-    width (px 150.0)
-    margin (px 0.0) (px 0.0) (px 0.0) (px 40.0)
