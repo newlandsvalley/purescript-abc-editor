@@ -266,10 +266,10 @@ viewParseError state =
 viewCanvas :: State -> HTML Event
 viewCanvas state =
   if (state.vexRendered) then
-    div ! centreStyle $ do
+    div ! canvasStyle $ do
       canvas ! At.id "vextab" $ mempty
   else
-    div do
+    div ! canvasStyle $ do
       canvas ! At.id "vextab" ! At.hidden "hidden" $ text ""
 
 -- | only display the player if we have a MIDI recording
@@ -304,9 +304,14 @@ transpositionMenu state =
         let
           mks = fromMaybe cMajor $ getKeySig tune
         in
-          do
-            select ! selectionStyle #! onChange (\e -> Transpose (targetValue e) )
-              $ (keyMenuOptions mks.keySignature)
+          -- only offer transposition if we don't have strange Klezmer/Balkan type modes
+          if (List.null mks.modifications) then
+            do
+              select ! selectionStyle #! onChange (\e -> Transpose (targetValue e) )
+                $ (keyMenuOptions mks.keySignature)
+            else
+              select ! selectionStyle ! At.disabled "disabled" #! onChange (const NoOp )
+                $ (keyMenuOptions cMajor.keySignature)
       _ ->
         do
           select ! selectionStyle ! At.disabled "disabled" #! onChange (const NoOp )
@@ -356,8 +361,6 @@ view state =
           tempoSlider state
         div ! leftPanelComponentStyle $ do
           viewPlayer state
-        div ! leftPanelComponentStyle $ do
-          debugPlayer state
 
       -- the editable text on the right
       div ! rightPaneStyle $ do
@@ -367,4 +370,3 @@ view state =
         viewParseError state
       -- the score
       viewCanvas state
-        -- debugVex state

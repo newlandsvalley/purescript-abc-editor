@@ -88,3 +88,9 @@ selectionStyle =
   style do
     margin (px 0.0) (px 0.0) (px 0.0) (px 40.0)
     fontSize (em 1.0)
+
+canvasStyle :: Attribute
+canvasStyle =
+  style do
+    float floatLeft
+    margin (0.0 # px) (px 0.0) (px 0.0) (px 40.0)
