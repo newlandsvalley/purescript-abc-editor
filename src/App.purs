@@ -13,7 +13,7 @@ import Data.Abc.Octave as Octave
 import Data.Abc.Tempo (defaultTempo, getBpm, setBpm)
 import Data.Abc.Transposition (transposeTo)
 import Data.Abc.Accidentals as Accidentals
-import Data.Abc.Notation (getKeySig)
+import Data.Abc.Notation (getKeySig, getTitle)
 import Data.Abc.Parser (PositionedParseError(..), parse, parseKeySignature)
 import Data.Array (length, slice)
 import Data.Either (Either(..), isLeft, isRight)
@@ -103,7 +103,8 @@ foldp RequestFileDownload state =
      , effects:
        [ do
            let
-             fileName = fromMaybe "unknown.abc" state.fileName
+             -- fileName = fromMaybe "unknown.abc" state.fileName
+             fileName = getFileName state
              fsp = { name: fileName, contents : state.abc} :: Filespec
            res <- liftEff $ saveTextFile fsp
            pure $ (Just NoOp)
@@ -176,6 +177,19 @@ onChangedFile filespec state =
       state { fileName = Just filespec.name}
   in
     onChangedAbc filespec.contents newState
+
+-- | get the file name from the previously loaded ABC or from the ABC itseelf
+getFileName :: State -> String
+getFileName state =
+  case state.fileName of
+    Just name ->
+      name
+    _ ->
+      case state.tuneResult of
+        Right tune ->
+          (fromMaybe "untitled" $ getTitle tune) <> ".abc"
+        _ ->
+          "untitled.abc"
 
 -- | we cannot initialise Vex until we have rendered the Dom so initialise on first reference
 ensureVexInitialised :: forall e. State -> Aff (vt :: VexScore.VEXTAB | e) (Maybe Event)
@@ -366,6 +380,7 @@ view state =
       div ! rightPaneStyle $ do
         -- p $ text $ fromMaybe "no file chosen" state.fileName
         textarea ! taStyle ! At.cols "70" ! At.rows "15" ! At.value state.abc
+          ! At.spellcheck "false" ! At.autocomplete "false" ! At.autofocus "true"
           #! onInput (\e -> Abc (targetValue e) ) $ mempty
         viewParseError state
       -- the score
