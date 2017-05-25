@@ -40,16 +40,16 @@ rightPaneStyle =
   style do
     float floatLeft
 
+labelAlignmentStyle :: Attribute
+labelAlignmentStyle =
+  style do
+    display inlineBlock
+    width (px 165.0)
+
 leftPanelComponentStyle :: Attribute
 leftPanelComponentStyle =
     style $ do
       margin (10.0 # px) (px 0.0) (px 20.0) (px 40.0)
-      fontSize (em 1.2)
-
-initialComponentStyle :: Attribute
-initialComponentStyle =
-    style $ do
-      margin (0.0 # px) (px 0.0) (px 20.0) (px 40.0)
       fontSize (em 1.2)
 
 inputStyle :: Attribute
@@ -86,13 +86,13 @@ buttonStyle enabled =
 sliderStyle :: Attribute
 sliderStyle =
   style do
-    width (px 150.0)
-    margin (px 0.0) (px 0.0) (px 0.0) (px 40.0)
+    width (px 160.0)
+    margin (px 0.0) (px 0.0) (px 0.0) (px 10.0)
 
 selectionStyle :: Attribute
 selectionStyle =
   style do
-    margin (px 0.0) (px 0.0) (px 0.0) (px 40.0)
+    margin (px 0.0) (px 0.0) (px 0.0) (px 10.0)
     fontSize (em 1.0)
 
 canvasStyle :: Attribute

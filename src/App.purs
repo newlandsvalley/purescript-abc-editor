@@ -352,28 +352,33 @@ view state =
       h1 ! centreStyle $ text "ABC Editor"
       -- the options and buttons on the left
       div ! leftPaneStyle $ do
-        div ! initialComponentStyle $ do
-          text "load an ABC file:"
+        div ! leftPanelComponentStyle $ do
+          label ! labelAlignmentStyle $ do
+            text "load an ABC file:"
           -- the label is a hack to allow styling of file input which is
           -- otherwise impossible - see https://stackoverflow.com/questions/572768/styling-an-input-type-file-button
           label ! inputLabelStyle ! At.className "hoverable" ! At.for "fileinput" $ text "choose"
           input ! inputStyle ! At.type' "file" ! At.id "fileinput" ! At.accept ".abc, .txt"
                #! onChange (const RequestFileUpload)
         div ! leftPanelComponentStyle  $ do
-          text  "save or clear ABC:"
+          label ! labelAlignmentStyle $ do
+            text  "save or clear ABC:"
           button ! (buttonStyle true) ! At.className "hoverable" #! onClick (const RequestFileDownload) $ text "save"
           button ! (buttonStyle true) ! At.className "hoverable" #! onClick (const Reset) $ text "clear"
         div ! leftPanelComponentStyle $ do
-          text  "change octave:"
+          label ! labelAlignmentStyle $ do
+            text  "change octave:"
           (button !? (not isEnabled)) (At.disabled "disabled") ! (buttonStyle isEnabled) ! At.className "hoverable"
                #! onClick (const $ MoveOctave true) $ text "up"
           (button !? (not isEnabled)) (At.disabled "disabled") ! (buttonStyle isEnabled) ! At.className "hoverable"
                #! onClick (const $ MoveOctave false) $ text "down"
         div ! leftPanelComponentStyle $ do
-          text "transpose to: "
+          label ! labelAlignmentStyle $ do
+            text "transpose to: "
           transpositionMenu state
         div ! leftPanelComponentStyle $ do
-          text "change tempo:"
+          label ! labelAlignmentStyle $ do
+            text "change tempo:"
           tempoSlider state
         div ! leftPanelComponentStyle $ do
           viewPlayer state
