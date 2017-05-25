@@ -29,7 +29,7 @@ import Prelude (bind, const, discard, id, max, min, not, pure, show, ($), (#), (
 import Pux (EffModel, noEffects, mapEffects, mapState)
 import Pux.DOM.Events (DOMEvent, onClick, onChange, onInput, targetValue)
 import Pux.DOM.HTML (HTML, child)
-import Text.Smolder.HTML (button, canvas, div, h1, input, p, span, select, textarea)
+import Text.Smolder.HTML (button, canvas, div, h1, input, label, p, span, select, textarea)
 import Text.Smolder.HTML.Attributes as At
 import Text.Smolder.Markup (text, (#!), (!), (!?))
 import VexTab.Abc.Score (renderTune)
@@ -352,15 +352,17 @@ view state =
       h1 ! centreStyle $ text "ABC Editor"
       -- the options and buttons on the left
       div ! leftPaneStyle $ do
-        div ! initialLabelStyle $ do
+        div ! initialComponentStyle $ do
           text "load an ABC file:"
-        div ! leftPanelComponentStyle $ do
+          -- the label is a hack to allow styling of file input which is
+          -- otherwise impossible - see https://stackoverflow.com/questions/572768/styling-an-input-type-file-button
+          label ! inputLabelStyle ! At.className "hoverable" ! At.for "fileinput" $ text "choose"
           input ! inputStyle ! At.type' "file" ! At.id "fileinput" ! At.accept ".abc, .txt"
                #! onChange (const RequestFileUpload)
         div ! leftPanelComponentStyle  $ do
-          text  "save or reset ABC text:"
+          text  "save or clear ABC:"
           button ! (buttonStyle true) ! At.className "hoverable" #! onClick (const RequestFileDownload) $ text "save"
-          button ! (buttonStyle true) ! At.className "hoverable" #! onClick (const Reset) $ text "reset"
+          button ! (buttonStyle true) ! At.className "hoverable" #! onClick (const Reset) $ text "clear"
         div ! leftPanelComponentStyle $ do
           text  "change octave:"
           (button !? (not isEnabled)) (At.disabled "disabled") ! (buttonStyle isEnabled) ! At.className "hoverable"

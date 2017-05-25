@@ -5,7 +5,7 @@ import Text.Smolder.Markup (Attribute)
 import Pux.DOM.HTML.Attributes (style)
 import CSS.Background (backgroundColor)
 import CSS.Color (rgb, red, lightgrey, darkgrey)
-import CSS.Display (display, block, float, floatLeft)
+import CSS.Display (display, displayNone, block, inlineBlock, float, floatLeft)
 import CSS.Font (color, fontSize)
 import CSS.Geometry (width, padding, margin)
 import CSS.Size (px, em)
@@ -46,18 +46,24 @@ leftPanelComponentStyle =
       margin (10.0 # px) (px 0.0) (px 20.0) (px 40.0)
       fontSize (em 1.2)
 
-initialLabelStyle :: Attribute
-initialLabelStyle =
+initialComponentStyle :: Attribute
+initialComponentStyle =
     style $ do
-      margin (0.0 # px) (px 0.0) (px 0.0) (px 40.0)
+      margin (0.0 # px) (px 0.0) (px 20.0) (px 40.0)
       fontSize (em 1.2)
 
 inputStyle :: Attribute
 inputStyle =
+  style $ do
+    display displayNone
+
+inputLabelStyle :: Attribute
+inputLabelStyle =
   style do
-    padding (px 10.0) (px 0.0) (px 10.0) (px 0.0)
-    -- margin (px 0.0) (px 0.0) (px 0.0) (px 40.0)
-    fontSize (em 1.0)
+    margin (px 0.0) (px 0.0) (px 0.0) (px 10.0)
+    fontSize (em 1.1)
+    display inlineBlock
+    padding (px 1.0) (px 8.0) (px 0.0) (px 8.0)
 
 errorHighlightStyle :: Attribute
 errorHighlightStyle =
