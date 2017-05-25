@@ -49,7 +49,7 @@ data Event
     | SetTempo Int           -- set the tempo to the required bpm
     | Transpose String       -- transpose to a new key
     | PlayerEvent MidiPlayer.Event
-    | Reset
+    | Clear
 
 type State = {
     abc :: String
@@ -116,7 +116,7 @@ foldp RequestFileDownload state =
            pure $ (Just NoOp)
        ]
     }
-foldp Reset state =
+foldp Clear state =
   noEffects $ state { abc = ""
                     , fileName = Nothing
                     , tuneResult = nullTune
@@ -253,6 +253,14 @@ changeTune f state =
     _ ->
       state
 
+viewFileName :: State -> HTML Event
+viewFileName state =
+  case state.fileName of
+    Just name ->
+      text name
+    _ ->
+      mempty
+
 -- | display a snippet of text with the error highlighted
 viewParseError :: State -> HTML Event
 viewParseError state =
@@ -369,11 +377,13 @@ view state =
           label ! inputLabelStyle ! At.className "hoverable" ! At.for "fileinput" $ text "choose"
           input ! inputStyle ! At.type' "file" ! At.id "fileinput" ! At.accept ".abc, .txt"
                #! onChange (const RequestFileUpload)
+        div ! leftPanelComponentStyle $ do
+          viewFileName state
         div ! leftPanelComponentStyle  $ do
           label ! labelAlignmentStyle $ do
             text  "save or clear ABC:"
           button ! (buttonStyle true) ! At.className "hoverable" #! onClick (const RequestFileDownload) $ text "save"
-          button ! (buttonStyle true) ! At.className "hoverable" #! onClick (const Reset) $ text "clear"
+          button ! (buttonStyle true) ! At.className "hoverable" #! onClick (const Clear) $ text "clear"
         div ! leftPanelComponentStyle $ do
           label ! labelAlignmentStyle $ do
             text  "change octave:"
