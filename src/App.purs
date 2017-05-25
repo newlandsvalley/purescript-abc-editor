@@ -75,12 +75,16 @@ initialiseVex =
    in
      VexScore.initialise (config)
 
+-- | there is no tune yet
+nullTune :: Either PositionedParseError AbcTune
+nullTune =
+  Left (PositionedParseError { pos : 0, error : "" })
 
 initialState :: State
 initialState = {
     abc : ""
   , fileName : Nothing
-  , tuneResult : Left (PositionedParseError { pos : 0, error : "" })
+  , tuneResult : nullTune
   , vexInitialised : false    -- we initialise on first reference
   , vexRendered : false
   , playerState : Nothing
@@ -98,6 +102,8 @@ foldp RequestFileUpload state =
          pure $ Just (FileLoaded filespec)
      ]
   }
+foldp (FileLoaded filespec) state =
+  onChangedFile filespec state
 foldp RequestFileDownload state =
    { state: state
      , effects:
@@ -110,10 +116,13 @@ foldp RequestFileDownload state =
            pure $ (Just NoOp)
        ]
     }
-foldp (FileLoaded filespec) state =
-  onChangedFile filespec state
 foldp Reset state =
-  noEffects $ state { abc = "", fileName = Nothing, vexRendered = false }
+  noEffects $ state { abc = ""
+                    , fileName = Nothing
+                    , tuneResult = nullTune
+                    , vexRendered = false
+                    , playerState = Nothing
+                    }
 foldp (VexInitialised initialised) state =
   noEffects $ state { vexInitialised = initialised }
 foldp (VexRendered rendered) state =
