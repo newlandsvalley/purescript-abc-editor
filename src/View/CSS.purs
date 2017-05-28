@@ -1,33 +1,36 @@
 module View.CSS where
 
 import Prelude (discard, ($), (#))
+import Data.NonEmpty (singleton)
 import Text.Smolder.Markup (Attribute)
 import Pux.DOM.HTML.Attributes (style)
 import CSS.Background (backgroundColor)
 import CSS.Color (rgb, red, lightgrey, darkgrey)
+import CSS.String (fromString)
 import CSS.Display (display, displayNone, block, inlineBlock, float, floatLeft)
-import CSS.Font (color, fontSize)
+import CSS.Font (GenericFontFamily(..), color, fontSize, fontFamily)
 import CSS.Geometry (width, padding, margin)
 import CSS.Size (px, em)
 import CSS.TextAlign (textAlign, leftTextAlign, center)
+
+monospace :: GenericFontFamily
+monospace = GenericFontFamily $ fromString "monospace"
 
 taStyle :: Attribute
 taStyle =
     style do
       padding (px 10.0) (px 0.0) (px 10.0) (px 0.0)
       fontSize (em 1.5)
+      fontFamily [ "Times New Roman" ] (singleton monospace)
       backgroundColor (rgb 243 246 198)
       textAlign leftTextAlign
       margin (px 0.0) (px 2.0) (px 0.0) (px 2.0)
       display block
-      -- fontFamily [ "monospace" ]
-      -- align center
 
 centreStyle :: Attribute
 centreStyle =
   style do
     textAlign center
-    -- margin auto
 
 leftPaneStyle :: Attribute
 leftPaneStyle =
