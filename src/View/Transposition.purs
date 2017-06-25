@@ -3,7 +3,6 @@ module View.Transposition
 
 import Data.Abc (Accidental(..), KeySignature, KeyAccidental(..), Mode(..), PitchClass(..))
 import Data.Abc.Accidentals (fromKeySig)
-import Data.Newtype (unwrap)
 import Prelude (show, (<>), (==), ($))
 import Pux.DOM.HTML (HTML)
 import Text.Smolder.Markup (text, (!))
@@ -72,9 +71,8 @@ ka pc a =
 
 -- | how a key is displayed in the menu
 showKey :: Mode -> KeyAccidental -> String
-showKey mode nka =
+showKey mode (KeyAccidental kacc) =
   let
-    kacc = unwrap nka
     showAcc =
       case kacc.accidental of
         Sharp -> "#"
