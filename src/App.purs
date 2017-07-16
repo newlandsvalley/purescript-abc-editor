@@ -25,7 +25,7 @@ import Data.String (fromCharArray, toCharArray)
 import View.Transposition (keyMenuOptions)
 import View.CSS
 import FileIO.FileIO (FILEIO, Filespec, loadTextFile, saveTextFile)
-import Prelude (bind, const, discard, id, max, min, not, pure, show, ($), (#), (<>), (+), (-), (<<<))
+import Prelude (bind, const, discard, id, max, min, not, pure, show, ($), (#), (==), (<>), (+), (-), (<<<))
 import Pux (EffModel, noEffects, mapEffects, mapState)
 import Pux.DOM.Events (DOMEvent, onClick, onChange, onInput, targetValue)
 import Pux.DOM.HTML (HTML, child)
@@ -357,7 +357,7 @@ targetTempo s =
 isPlaying :: State -> Boolean
 isPlaying state =
   case state.playerState of
-    Just ps -> ps.playing
+    Just ps -> (ps.playing == MidiPlayer.PLAYING)
     _ -> false
 
 view :: State -> HTML Event
