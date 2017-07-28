@@ -1,7 +1,8 @@
 module App where
 
 -- import CSS.Geometry (paddingTop, paddingBottom, marginLeft, marginRight, marginTop, width)
-import Data.Midi.Player as MidiPlayer
+import Audio.Midi.Player as MidiPlayer
+import Audio.BasePlayer (PlaybackState(..)) as BasePlayer
 import VexTab.Score as VexScore
 import Audio.SoundFont (AUDIO)
 import Control.Monad.Aff (Aff)
@@ -226,7 +227,7 @@ debugPlayer state =
         text ("no player state")
     Just pstate ->
       do
-       text ("player melody size: " <> (show $ length pstate.melody))
+       text ("player melody size: " <> (show $ length pstate.basePlayer.melody))
 
 -- | transpose
 transposeTune :: String -> State -> State
@@ -357,7 +358,11 @@ targetTempo s =
 isPlaying :: State -> Boolean
 isPlaying state =
   case state.playerState of
-    Just ps -> (ps.playing == MidiPlayer.PLAYING)
+    Just ps ->
+      let
+        playbackState = ps.basePlayer.playing
+      in
+        (playbackState == BasePlayer.PLAYING)
     _ -> false
 
 view :: State -> HTML Event
