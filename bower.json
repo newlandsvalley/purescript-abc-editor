@@ -1,5 +1,5 @@
 {
-  "name": "purescript-abc-player",
+  "name": "purescript-abc-editor",
   "ignore": [
     "**/.*",
     "node_modules",
