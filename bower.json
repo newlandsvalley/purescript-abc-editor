@@ -8,9 +8,9 @@
   ],
   "dependencies": {
     "purescript-pux": "^9.1.0",
-    "purescript-abc-parser": "https://github.com/newlandsvalley/purescript-abc-parser.git",
-    "purescript-scores": "https://github.com/newlandsvalley/purescript-scores.git",
-    "purescript-midi-player": "https://github.com/newlandsvalley/purescript-midi-player.git",
+    "purescript-abc-parser": "https://github.com/newlandsvalley/purescript-abc-parser.git#1.0.0",
+    "purescript-scores": "https://github.com/newlandsvalley/purescript-scores.git#1.0.0",
+    "purescript-midi-player": "https://github.com/newlandsvalley/purescript-midi-player.git#1.0.0",
     "purescript-debug": "^3.0.0"
   },
   "devDependencies": {
