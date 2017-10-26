@@ -1,10 +1,12 @@
 module App where
 
 -- import CSS.Geometry (paddingTop, paddingBottom, marginLeft, marginRight, marginTop, width)
+
+import Network.HTTP.Affjax (AJAX)
 import Audio.Midi.Player as MidiPlayer
 import Audio.BasePlayer (PlaybackState(..)) as BasePlayer
 import VexTab.Score as VexScore
-import Audio.SoundFont (AUDIO)
+import Audio.SoundFont (AUDIO, Instrument, loadPianoSoundFont)
 import Control.Monad.Aff (Aff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
@@ -16,16 +18,15 @@ import Data.Abc.Transposition (transposeTo)
 import Data.Abc.Accidentals as Accidentals
 import Data.Abc.Notation (getKeySig, getTitle)
 import Data.Abc.Parser (PositionedParseError(..), parse, parseKeySignature)
-import Data.Array (length, slice)
+import Data.Array (length, singleton, slice)
 import Data.Either (Either(..), isLeft, isRight)
 import Data.List as List
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Int (fromString)
-import Data.Monoid (mempty)
 import Data.String (fromCharArray, toCharArray)
 import View.Transposition (keyMenuOptions)
 import View.CSS
-import FileIO.FileIO (FILEIO, Filespec, loadTextFile, saveTextFile)
+import JS.FileIO (FILEIO, Filespec, loadTextFile, saveTextFile)
 import Prelude (bind, const, discard, id, max, min, not, pure, show, ($), (#), (==), (<>), (+), (-), (<<<))
 import Pux (EffModel, noEffects, mapEffects, mapState)
 import Pux.DOM.Events (DOMEvent, onClick, onChange, onInput, targetValue)
@@ -41,6 +42,8 @@ import VexTab.Abc.Score (renderTune)
 data Event
     = NoOp
     | Abc String
+    | RequestLoadPianoFont String
+    | FontLoaded Instrument
     | RequestFileUpload
     | RequestFileDownload
     | FileLoaded Filespec
@@ -58,7 +61,7 @@ type State = {
   , tuneResult :: Either PositionedParseError AbcTune
   , vexInitialised :: Boolean
   , vexRendered :: Boolean
-  , playerState :: Maybe MidiPlayer.State
+  , playerState :: MidiPlayer.State
 }
 
 -- | initialise VexTab
@@ -88,18 +91,28 @@ initialState = {
   , tuneResult : nullTune
   , vexInitialised : false    -- we initialise on first reference
   , vexRendered : false
-  , playerState : Nothing
+  , playerState : MidiPlayer.initialState []
   }
 
 
-foldp :: Event -> State -> EffModel State Event (fileio :: FILEIO, au :: AUDIO, vt :: VexScore.VEXTAB)
+foldp :: Event -> State -> EffModel State Event (ajax :: AJAX, fileio :: FILEIO, au :: AUDIO, vt :: VexScore.VEXTAB)
 foldp NoOp state =  noEffects $ state
 foldp (Abc s) state =  onChangedAbc s state
+foldp (RequestLoadPianoFont fontDir) state =
+  let
+    effects =
+      [
+        do  -- request the fonts are loaded
+          instrument <- loadPianoSoundFont fontDir
+          pure $ Just (FontLoaded instrument)
+      ]
+  in
+    {state: state, effects: effects}
 foldp RequestFileUpload state =
  { state: state
    , effects:
      [ do
-         filespec <- loadTextFile
+         filespec <- loadTextFile "abcinput"
          pure $ Just (FileLoaded filespec)
      ]
   }
@@ -117,12 +130,18 @@ foldp RequestFileDownload state =
            pure $ (Just NoOp)
        ]
     }
+foldp (FontLoaded instrument) state =
+  let
+    playerState = MidiPlayer.initialState (singleton instrument)
+  in
+    -- we need to react to a changed Euterpea after each instrument font loads.  This is because the user may edit
+    -- the tne text to incorporate the new instrument names before loading their soundfonts
+    noEffects $ state { playerState = playerState }
 foldp Clear state =
   noEffects $ state { abc = ""
                     , fileName = Nothing
                     , tuneResult = nullTune
                     , vexRendered = false
-                    , playerState = Nothing
                     }
 foldp (VexInitialised initialised) state =
   noEffects $ state { vexInitialised = initialised }
@@ -144,13 +163,9 @@ foldp (Transpose newKey) state =
   in
     onChangedAbc newState.abc newState
 foldp (PlayerEvent e) state =
-  case state.playerState of
-    Just pstate ->
-      MidiPlayer.foldp e pstate
-        # mapEffects PlayerEvent
-        # mapState \pst -> state { playerState = Just pst }
-    _ ->
-      noEffects state
+  MidiPlayer.foldp e state.playerState
+    # mapEffects PlayerEvent
+    # mapState \pst -> state { playerState = pst }
 
 -- | make sure everything is notified if the ABC changes for any reason
 -- | we'll eventually have to add effects
@@ -164,7 +179,7 @@ onChangedAbc abc state =
   in
     case tuneResult of
       Right tune ->
-        {state: newState { playerState = Just MidiPlayer.initialState}
+        {state: newState
           , effects:
             [
               ensureVexInitialised newState
@@ -177,7 +192,7 @@ onChangedAbc abc state =
 
         }
       Left err ->
-        noEffects newState { playerState = Nothing }
+        noEffects newState
 
 -- | make sure everything is notified if a new file is loaded
 onChangedFile :: forall e. Filespec -> State -> EffModel State Event (fileio :: FILEIO, vt :: VexScore.VEXTAB| e)
@@ -221,13 +236,8 @@ debugVex state =
 
 debugPlayer :: State -> HTML Event
 debugPlayer state =
-  case state.playerState of
-    Nothing ->
-      do
-        text ("no player state")
-    Just pstate ->
-      do
-       text ("player melody size: " <> (show $ length pstate.basePlayer.melody))
+  do
+    text ("player melody size: " <> (show $ length state.playerState.basePlayer.melody))
 
 -- | transpose
 transposeTune :: String -> State -> State
@@ -260,7 +270,7 @@ viewFileName state =
     Just name ->
       text name
     _ ->
-      mempty
+      text ""
 
 -- | display a snippet of text with the error highlighted
 viewParseError :: State -> HTML Event
@@ -293,25 +303,25 @@ viewParseError state =
               span ! errorHighlightStyle $ text (fromCharArray errorChar)
               text $ fromCharArray errorSuffix
       _ ->
-        mempty
+        text ""
 
 viewCanvas :: State -> HTML Event
 viewCanvas state =
   if (state.vexRendered) then
     div ! canvasStyle $ do
-      canvas ! At.id "vextab" $ mempty
+      canvas ! At.id "vextab" $ text ""
   else
     div ! canvasStyle $ do
       canvas ! At.id "vextab" ! At.hidden "hidden" $ text ""
 
--- | only display the player if we have a MIDI recording
+-- | only display the player if we have a Melody
 viewPlayer :: State -> HTML Event
 viewPlayer state =
-  case state.playerState of
-    Just pstate ->
-      child PlayerEvent MidiPlayer.view $ pstate
+  case state.tuneResult of
+    Right _ ->
+      child PlayerEvent MidiPlayer.view $ state.playerState
     _ ->
-      mempty
+      text ""
 
 tempoSlider :: State -> HTML Event
 tempoSlider state =
@@ -357,13 +367,10 @@ targetTempo s =
 -- | is the player playing ?
 isPlaying :: State -> Boolean
 isPlaying state =
-  case state.playerState of
-    Just ps ->
-      let
-        playbackState = ps.basePlayer.playing
-      in
-        (playbackState == BasePlayer.PLAYING)
-    _ -> false
+  let
+    playbackState = state.playerState.basePlayer.playing
+  in
+    (playbackState == BasePlayer.PLAYING)
 
 view :: State -> HTML Event
 view state =
@@ -379,8 +386,8 @@ view state =
             text "load an ABC file:"
           -- the label is a hack to allow styling of file input which is
           -- otherwise impossible - see https://stackoverflow.com/questions/572768/styling-an-input-type-file-button
-          label ! inputLabelStyle ! At.className "hoverable" ! At.for "fileinput" $ text "choose"
-          input ! inputStyle ! At.type' "file" ! At.id "fileinput" ! At.accept ".abc, .txt"
+          label ! inputLabelStyle ! At.className "hoverable" ! At.for "abcinput" $ text "choose"
+          input ! inputStyle ! At.type' "file" ! At.id "abcinput" ! At.accept ".abc, .txt"
                #! onChange (const RequestFileUpload)
         div ! leftPanelComponentStyle $ do
           viewFileName state
@@ -412,7 +419,7 @@ view state =
         -- p $ text $ fromMaybe "no file chosen" state.fileName
         textarea ! taStyle ! At.cols "70" ! At.rows "15" ! At.value state.abc
           ! At.spellcheck "false" ! At.autocomplete "false" ! At.autofocus "true"
-          #! onInput (\e -> Abc (targetValue e) ) $ mempty
+          #! onInput (\e -> Abc (targetValue e) ) $ text ""
         viewParseError state
       -- the score
       viewCanvas state

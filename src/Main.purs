@@ -1,32 +1,30 @@
 module Main where
 
-import App (foldp, initialState, view)
-import Control.Monad.Eff.Exception (EXCEPTION)
-import Control.Monad.Aff (Canceler, launchAff)
-import Audio.SoundFont (AUDIO, loadPianoSoundFont)
-import FileIO.FileIO (FILEIO)
+import App (Event(..), foldp, initialState, view)
+import Network.HTTP.Affjax (AJAX)
+import Audio.SoundFont (AUDIO)
+import JS.FileIO (FILEIO)
 import VexTab.Score as VexScore
 import Control.Monad.Eff (Eff)
-import Prelude (Unit, bind)
+import Prelude (Unit, bind, ($))
 import Pux (CoreEffects, start)
 import Pux.Renderer.React (renderToDOM)
+import Signal (Signal, constant)
 
-initialiseApp :: forall e. Eff (exception :: EXCEPTION | e) (Canceler e)
-initialiseApp = do
-  launchAff (loadPianoSoundFont "assets/soundfonts")
+
+initFont :: Signal Event
+initFont = constant $ RequestLoadPianoFont "assets/soundfonts"
 
 -- | Start and render the app
 -- main :: ∀ fx. Eff (CoreEffects (fileio :: FILEIO, au :: AUDIO, vt :: VexScore.VEXTAB| fx)) Unit
-main :: Eff (CoreEffects (fileio :: FILEIO, au:: AUDIO, vt :: VexScore.VEXTAB )) Unit
+main :: Eff (CoreEffects (ajax :: AJAX, fileio :: FILEIO, au:: AUDIO, vt :: VexScore.VEXTAB )) Unit
 main = do
-
-  _ <- initialiseApp
 
   app <- start
     { initialState: initialState
     , view
     , foldp
-    , inputs: []
+    , inputs: [ initFont ]
     }
 
   renderToDOM "#app" app.markup app.input
