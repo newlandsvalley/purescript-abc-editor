@@ -1,7 +1,7 @@
 module View.Transposition
   (keyMenuOptions) where
 
-import Data.Abc (Accidental(..), KeySignature, KeyAccidental(..), Mode(..), PitchClass(..))
+import Data.Abc (Accidental(..), KeySignature, Mode(..), Pitch(..), PitchClass(..))
 import Data.Abc.Accidentals (fromKeySig)
 import Prelude (show, (<>), (==), ($))
 import Pux.DOM.HTML (HTML)
@@ -37,46 +37,46 @@ keyMenuOptions targetKey =
     traverse_ f keys
 
 -- | the set of basic keys
-basicKeys :: Array KeyAccidental
+basicKeys :: Array Pitch
 basicKeys =
-  [ ka C Natural
-  , ka D Natural
-  , ka E Natural
-  , ka F Natural
-  , ka G Natural
-  , ka A Natural
-  , ka B Natural
+  [ pitch C Natural
+  , pitch D Natural
+  , pitch E Natural
+  , pitch F Natural
+  , pitch G Natural
+  , pitch A Natural
+  , pitch B Natural
   ]
 
 -- | the predominant Flat keys used in major modes
-flatKeys :: Array KeyAccidental
+flatKeys :: Array Pitch
 flatKeys =
-  [ ka A Flat
-  , ka B Flat
-  , ka E Flat
+  [ pitch A Flat
+  , pitch B Flat
+  , pitch E Flat
   ]
 
 -- | the predominant sharp keys used in minor modes
-sharpKeys :: Array KeyAccidental
+sharpKeys :: Array Pitch
 sharpKeys =
-  [ ka C Sharp
-  , ka F Sharp
-  , ka G Sharp
+  [ pitch C Sharp
+  , pitch F Sharp
+  , pitch G Sharp
   ]
 
--- | build a key Accidental
-ka :: PitchClass -> Accidental -> KeyAccidental
-ka pc a =
-  KeyAccidental { pitchClass : pc, accidental : a}
+-- | build a pitch
+pitch :: PitchClass -> Accidental -> Pitch
+pitch pc a =
+  Pitch { pitchClass : pc, accidental : a}
 
 -- | how a key is displayed in the menu
-showKey :: Mode -> KeyAccidental -> String
-showKey mode (KeyAccidental kacc) =
+showKey :: Mode -> Pitch -> String
+showKey mode (Pitch p) =
   let
     showAcc =
-      case kacc.accidental of
+      case p.accidental of
         Sharp -> "#"
         Flat -> "b"
         _ -> ""
   in
-    show kacc.pitchClass <> showAcc <> " " <> show mode
+    show p.pitchClass <> showAcc <> " " <> show mode

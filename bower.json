@@ -7,12 +7,15 @@
     "output"
   ],
   "dependencies": {
-    "purescript-scores": "https://github.com/newlandsvalley/purescript-scores.git#1.0.0",
-    "purescript-midi-player": "https://github.com/newlandsvalley/purescript-midi-player.git#1.1.4",
+    "purescript-scores": "https://github.com/newlandsvalley/purescript-scores.git#1.1.0",
+    "purescript-midi-player": "https://github.com/newlandsvalley/purescript-midi-player.git#1.2.1",
     "purescript-js-fileio": "https://github.com/newlandsvalley/purescript-js-fileio.git#1.0.2",
     "purescript-debug": "^3.0.0"
   },
   "devDependencies": {
     "purescript-psci-support": "^3.0.0"
+  },
+  "resolutions": {
+    "purescript-arraybuffer-types": "^2.0.0"
   }
 }
