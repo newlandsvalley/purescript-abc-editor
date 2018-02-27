@@ -16,7 +16,7 @@ import Data.Abc.Octave as Octave
 import Data.Abc.Tempo (defaultTempo, getBpm, setBpm)
 import Data.Abc.Transposition (transposeTo)
 import Data.Abc.Accidentals as Accidentals
-import Data.Abc.Notation (getKeySig, getTitle)
+import Data.Abc.Metadata (getKeySig, getTitle)
 import Data.Abc.Parser (PositionedParseError(..), parse, parseKeySignature)
 import Data.Array (length, singleton, slice)
 import Data.Either (Either(..), isLeft, isRight)

@@ -7,8 +7,8 @@
     "output"
   ],
   "dependencies": {
-    "purescript-scores": "https://github.com/newlandsvalley/purescript-scores.git#1.1.0",
-    "purescript-midi-player": "https://github.com/newlandsvalley/purescript-midi-player.git#1.2.1",
+    "purescript-scores": "https://github.com/newlandsvalley/purescript-scores.git#1.1.1",
+    "purescript-midi-player": "https://github.com/newlandsvalley/purescript-midi-player.git#1.2.3",
     "purescript-js-fileio": "https://github.com/newlandsvalley/purescript-js-fileio.git#1.0.2",
     "purescript-debug": "^3.0.0"
   },
