@@ -3,13 +3,14 @@ purescript-abc-editor
 
 This is an editor for musical scores written in the ABC notation. It allows you to edit ABC text and to save or reload it.  If the ABC is valid, you can see the score and play the tune, otherwise it displays an error.  You can also shift the octave, transpose or alter the tempo.
 
+Built with Purescript 12.0 and Halogen 4.0.0.
+
 Building
 --------
 
 from the current directory:
 
     $ bower install
-    $ ./build.sh
-    
-Then navigate to dist/index.html.
+    $ npm run build
 
+Then navigate to dist/index.html.

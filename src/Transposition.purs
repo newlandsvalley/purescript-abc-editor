@@ -1,21 +1,32 @@
-module View.Transposition
-  (keyMenuOptions) where
+module Transposition
+  (MenuOption(..), keyMenuOptions, cMajor, showKeySig) where
 
-import Data.Abc (Accidental(..), KeySignature, Mode(..), Pitch(..), PitchClass(..))
+import Data.Abc (Accidental(..), ModifiedKeySignature, KeySignature, Mode(..), Pitch(..), PitchClass(..))
 import Data.Abc.Accidentals (fromKeySig)
-import Prelude (show, (<>), (==), ($))
-import Pux.DOM.HTML (HTML)
-import Text.Smolder.Markup (text, (!))
-import Text.Smolder.HTML.Attributes (selected)
-import Text.Smolder.HTML (option)
-import Data.Foldable (traverse_)
+import Prelude (map, show, (<>), (==))
+import Data.List (List(..))
 
--- This module simply generates tre transposition menu options
+-- | a menu option is a string representing the option and a boolean indicating
+-- | whether it is selected
+data MenuOption =
+  MenuOption String Boolean
+
+-- | The C major key signature
+cMajor :: ModifiedKeySignature
+cMajor =
+     { keySignature:  { pitchClass: C, accidental: Natural, mode: Major }, modifications: Nil }
+
+-- | how a key signature is displayed in the menu
+showKeySig :: KeySignature -> String
+showKeySig ks =
+  showKey ks.mode (pitch ks.pitchClass ks.accidental)
+
+-- This module simply generates the transposition menu options
 
 -- | the menu options that are displayed for a given mode
 -- | with pre-selection present if the target matches
 -- | one of the options
-keyMenuOptions :: ∀ a. KeySignature -> HTML a
+keyMenuOptions :: KeySignature -> Array MenuOption
 keyMenuOptions targetKey =
   let
     kacc = fromKeySig targetKey
@@ -30,11 +41,11 @@ keyMenuOptions targetKey =
         next = showKey targetKey.mode k
       in
         if (next == target) then
-          option ! selected "selected" $ text next
+          MenuOption next true
         else
-          option $ text next
+          MenuOption next false
   in
-    traverse_ f keys
+    map f keys
 
 -- | the set of basic keys
 basicKeys :: Array Pitch
