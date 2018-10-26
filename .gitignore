@@ -2,6 +2,7 @@
 /node_modules/
 /.pulp-cache/
 /deprecated/
+/dist-vextab/
 /output/
 /dist/abc-editor.js
 /.psc*
