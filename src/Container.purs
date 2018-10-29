@@ -23,8 +23,9 @@ import Data.Abc.Octave as Octave
 import Data.Abc.Tempo (defaultTempo, getBpm, setBpm)
 import Data.Abc.Accidentals (fromKeySig)
 import Data.Abc.Transposition (transposeTo)
-import VexTab.Score as VexScore
-import VexTab.Abc.Score (renderTune)
+import VexFlow.Score (clearCanvas, renderTune, initialise) as Score
+import VexFlow.Types (Config)
+-- import VexFlow.Abc.Utils (canvasHeight)
 import Halogen as H
 import Halogen.Component.ChildPath as CP
 import Halogen.HTML as HH
@@ -49,6 +50,7 @@ type State =
 
 data Query a =
     Init a
+  | InitVex a
   | HandleABCFile FIC.Message a
   | HandleClearButton Button.Message a
   | HandleSaveButton Button.Message a
@@ -70,11 +72,12 @@ emptyTune :: AbcTune
 emptyTune =
   { headers : Nil, body: Nil }
 
+{-}
 -- | initialise VexTab
 initialiseVex :: Effect Boolean
 initialiseVex =
   let
-    config :: VexScore.Config
+    config :: Config
     config =
       { canvasDivId : "#vextab"
       , canvasX : 10
@@ -84,6 +87,26 @@ initialiseVex =
       }
    in
      VexScore.initialise (config)
+-}
+
+canvasWidth :: Int
+canvasWidth = 1500
+
+canvasHeight :: Int
+canvasHeight = 1200
+
+-- | initialise VexFlow
+initialiseVex :: Effect Unit
+initialiseVex =
+  let
+    config =
+      { canvasDivId : "vextab"
+      , canvasWidth : canvasWidth
+      , canvasHeight : canvasHeight
+      , scale : 0.8
+      }
+   in
+     Score.initialise (config)
 
 -- the player is generic over a variety of playable sources of music
 -- so we must specialize to MidiRecording
@@ -191,8 +214,12 @@ component =
   eval (Init next) = do
     -- instruments <- H.liftAff $  loadRemoteSoundFonts  [AcousticGrandPiano]
     instrument <- H.liftAff $ loadPianoSoundFont "assets/soundfonts"
-    _ <- H.liftEffect initialiseVex
     _ <- H.modify (\st -> st { instruments = A.singleton instrument } )
+    eval (InitVex next)
+  eval (InitVex next) = do
+    -- we split initialisation into two because Vex requires a rendering step
+    -- before it can be initialised
+    _ <- H.liftEffect initialiseVex
     pure next
   eval (HandleABCFile (FIC.FileLoaded filespec) next) = do
     _ <- H.modify (\st -> st { fileName = Just filespec.name } )
@@ -234,7 +261,8 @@ component =
     _ <- refreshPlayerState r
     let
       abcTune = either (\_ -> emptyTune) (identity) r
-    rendered <- H.liftEffect $ renderTune abcTune
+    _ <- H.liftEffect $ Score.clearCanvas
+    rendered <- H.liftEffect $ Score.renderTune abcTune canvasWidth
     _ <- H.modify (\st -> st { tuneResult = r, vexRendered = rendered } )
     pure next
   eval (HandleTuneIsPlaying (PC.IsPlaying p) next) = do
@@ -325,6 +353,7 @@ renderPlayer state =
       HH.div_
         [  ]
 
+{-}
 renderCanvas :: State -> H.ParentHTML Query ChildQuery ChildSlot Aff
 renderCanvas state =
   HH.div
@@ -333,6 +362,14 @@ renderCanvas state =
     [ HH.canvas
         [ HP.id_ "vextab" ]
     ]
+-}
+
+renderCanvas :: State -> H.ParentHTML Query ChildQuery ChildSlot Aff
+renderCanvas state =
+  HH.div
+    [ HP.class_ (H.ClassName "canvasDiv")
+    , HP.id_ "vextab"
+    ] []
 
 renderTempoSlider :: State ->  H.ParentHTML Query ChildQuery ChildSlot Aff
 renderTempoSlider state =
