@@ -5,7 +5,6 @@ import Prelude
 import Audio.SoundFont (Instrument, loadPianoSoundFont)
 import Audio.SoundFont.Melody.Class (MidiRecording(..))
 import Effect.Aff (Aff)
-import Effect (Effect)
 import Data.Either (Either(..), either, isLeft)
 import Data.Either.Nested (Either5)
 import Data.Functor.Coproduct.Nested (Coproduct5)
@@ -72,41 +71,13 @@ emptyTune :: AbcTune
 emptyTune =
   { headers : Nil, body: Nil }
 
-{-}
--- | initialise VexTab
-initialiseVex :: Effect Boolean
-initialiseVex =
-  let
-    config :: Config
-    config =
-      { canvasDivId : "#vextab"
-      , canvasX : 10
-      , canvasY : 10
-      , canvasWidth : 1300
-      , scale : 0.8
-      }
-   in
-     VexScore.initialise (config)
--}
-
-canvasWidth :: Int
-canvasWidth = 1500
-
-canvasHeight :: Int
-canvasHeight = 1200
-
--- | initialise VexFlow
-initialiseVex :: Effect Unit
-initialiseVex =
-  let
-    config =
-      { canvasDivId : "vextab"
-      , canvasWidth : canvasWidth
-      , canvasHeight : canvasHeight
-      , scale : 0.8
-      }
-   in
-     Score.initialise (config)
+vexConfig :: Config
+vexConfig =
+  { canvasDivId : "vextab"
+  , canvasWidth : 1400
+  , canvasHeight : 1000
+  , scale : 0.8
+  }
 
 -- the player is generic over a variety of playable sources of music
 -- so we must specialize to MidiRecording
@@ -219,7 +190,7 @@ component =
   eval (InitVex next) = do
     -- we split initialisation into two because Vex requires a rendering step
     -- before it can be initialised
-    _ <- H.liftEffect initialiseVex
+    _ <- H.liftEffect $ Score.initialise vexConfig
     pure next
   eval (HandleABCFile (FIC.FileLoaded filespec) next) = do
     _ <- H.modify (\st -> st { fileName = Just filespec.name } )
@@ -262,7 +233,7 @@ component =
     let
       abcTune = either (\_ -> emptyTune) (identity) r
     _ <- H.liftEffect $ Score.clearCanvas
-    rendered <- H.liftEffect $ Score.renderTune abcTune canvasWidth
+    rendered <- H.liftEffect $ Score.renderTune abcTune vexConfig
     _ <- H.modify (\st -> st { tuneResult = r, vexRendered = rendered } )
     pure next
   eval (HandleTuneIsPlaying (PC.IsPlaying p) next) = do
