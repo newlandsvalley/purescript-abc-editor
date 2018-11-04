@@ -132,10 +132,7 @@ component =
 
   render :: State -> H.ParentHTML Query ChildQuery ChildSlot Aff
   render state = HH.div_
-    [ HH.h1
-      [HP.class_ (H.ClassName "center") ]
-      [HH.text "ABC Editor"]
-    , HH.div
+    [ HH.div
       -- left pane
       [ HP.class_ (H.ClassName "leftPane") ]
       [
