@@ -63,7 +63,7 @@ abcFileInputCtx :: FIC.Context
 abcFileInputCtx =
   { componentId : "abcinput"
   , isBinary : false
-  , prompt : "choose"
+  , prompt : "choose file"
   , accept : MediaType ".abc"
   }
 
@@ -73,9 +73,9 @@ emptyTune =
 
 vexConfig :: Config
 vexConfig =
-  { canvasDivId : "vextab"
-  , canvasWidth : 1400
-  , canvasHeight : 1000
+  { canvasDivId : "vexflow"
+  , canvasWidth : 1300
+  , canvasHeight : 700
   , scale : 0.8
   }
 
@@ -132,7 +132,10 @@ component =
 
   render :: State -> H.ParentHTML Query ChildQuery ChildSlot Aff
   render state = HH.div_
-    [ HH.div
+    [ HH.h1
+        [HP.class_ (H.ClassName "center") ]
+        [HH.text "ABC Editor"]
+    , HH.div
       -- left pane
       [ HP.class_ (H.ClassName "leftPane") ]
       [
@@ -321,22 +324,11 @@ renderPlayer state =
       HH.div_
         [  ]
 
-{-}
 renderCanvas :: State -> H.ParentHTML Query ChildQuery ChildSlot Aff
 renderCanvas state =
   HH.div
     [ HP.class_ (H.ClassName "canvasDiv")
-    ]
-    [ HH.canvas
-        [ HP.id_ "vextab" ]
-    ]
--}
-
-renderCanvas :: State -> H.ParentHTML Query ChildQuery ChildSlot Aff
-renderCanvas state =
-  HH.div
-    [ HP.class_ (H.ClassName "canvasDiv")
-    , HP.id_ "vextab"
+    , HP.id_ "vexflow"
     ] []
 
 renderTempoSlider :: State ->  H.ParentHTML Query ChildQuery ChildSlot Aff

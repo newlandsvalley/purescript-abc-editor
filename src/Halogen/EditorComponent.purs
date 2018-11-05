@@ -58,8 +58,8 @@ component =
   render state =
     HH.div_
       [ HH.textarea
-         [ HP.rows 15
-         , HP.cols 70
+         [ HP.rows 13
+         , HP.cols 60
          , HP.autofocus true
          , HP.value state.text
          , HP.class_ $ ClassName "abcEdit"
