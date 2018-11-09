@@ -5,7 +5,7 @@ import Prelude
 import Audio.SoundFont (Instrument, loadPianoSoundFont)
 import Audio.SoundFont.Melody.Class (MidiRecording(..))
 import Effect.Aff (Aff)
-import Data.Either (Either(..), either, isLeft)
+import Data.Either (Either(..), either, hush, isLeft)
 import Data.Either.Nested (Either5)
 import Data.Functor.Coproduct.Nested (Coproduct5)
 import Data.Maybe (Maybe(..), fromJust, fromMaybe, isJust)
@@ -24,7 +24,6 @@ import Data.Abc.Accidentals (fromKeySig)
 import Data.Abc.Transposition (transposeTo)
 import VexFlow.Score (clearCanvas, renderTune, initialise) as Score
 import VexFlow.Types (Config)
--- import VexFlow.Abc.Utils (canvasHeight)
 import Halogen as H
 import Halogen.Component.ChildPath as CP
 import Halogen.HTML as HH
@@ -37,8 +36,9 @@ import Halogen.SimpleButtonComponent as Button
 import Halogen.PlayerComponent as PC
 import JS.FileIO (Filespec, saveTextFile)
 import Partial.Unsafe (unsafePartial)
-
 import Transposition (MenuOption(..), keyMenuOptions, cMajor, showKeySig)
+import Window (print)
+
 
 type State =
   { instruments :: Array Instrument
@@ -58,6 +58,7 @@ data Query a =
   | HandleTempoInput Int a
   | HandleTranspositionKey String a
   | HandleTuneIsPlaying PC.Message a
+  | HandlePrint a
 
 abcFileInputCtx :: FIC.Context
 abcFileInputCtx =
@@ -168,6 +169,14 @@ component =
          -- down
          , renderOctaveButton false state
          ]
+      , HH.div
+        -- print
+        [ HP.class_ (H.ClassName "leftPanelComponent")]
+        [ HH.label
+           [ HP.class_ (H.ClassName "labelAlignment") ]
+           [ HH.text "print score:" ]
+        , renderPrintButton state
+        ]
       , renderTempoSlider state
       , renderTranspositionMenu state
       , renderPlayer state
@@ -178,7 +187,7 @@ component =
         [
           HH.slot' editorSlotNo unit ED.component unit (HE.input HandleNewTuneText)
         ]
-    , renderCanvas state
+    , renderScore state
     ]
 
   eval :: Query ~> H.ParentDSL State Query ChildQuery ChildSlot Void Aff
@@ -198,6 +207,7 @@ component =
     _ <- H.query' playerSlotNo unit $ H.action PC.StopMelody
     pure next
   eval (HandleClearButton (Button.Toggled _) next) = do
+    _ <- H.modify (\st -> st { fileName = Nothing } )
     _ <- H.query' editorSlotNo unit $ H.action (ED.UpdateContent "")
     pure next
   eval (HandleSaveButton (Button.Toggled _) next) = do
@@ -245,6 +255,9 @@ component =
     _ <- H.query' abcFileSlotNo unit $ H.action (FIC.UpdateEnabled (not p))
     _ <- H.query' clearTextSlotNo unit $ H.action (Button.UpdateEnabled (not p))
     -}
+    pure next
+  eval (HandlePrint next) = do
+    _ <-  H.liftEffect print
     pure next
 
 -- | synchronize child components whenever we might have a change in tune text
@@ -324,12 +337,44 @@ renderPlayer state =
       HH.div_
         [  ]
 
-renderCanvas :: State -> H.ParentHTML Query ChildQuery ChildSlot Aff
-renderCanvas state =
+renderPrintButton :: State -> H.ParentHTML Query ChildQuery ChildSlot Aff
+renderPrintButton state =
+  let
+    enabled =
+      either (\_ -> false) (\_ -> true) state.tuneResult
+    className =
+          either (\_ -> "unhoverable") (\_ -> "hoverable") state.tuneResult
+  in
+    HH.button
+      [ HE.onClick (HE.input_ (HandlePrint))
+      , HP.class_ $ ClassName className
+      , HP.enabled enabled
+      ]
+      [ HH.text "print" ]        
+
+renderScore :: State -> H.ParentHTML Query ChildQuery ChildSlot Aff
+renderScore state =
   HH.div
-    [ HP.class_ (H.ClassName "canvasDiv")
-    , HP.id_ "vexflow"
-    ] []
+    [ HP.id_ "score"]
+    [ renderTuneTitle state
+      , HH.div
+         [ HP.class_ (H.ClassName "canvasDiv")
+         , HP.id_ "vexflow"
+         ] []
+    ]
+
+renderTuneTitle :: State -> H.ParentHTML Query ChildQuery ChildSlot Aff
+renderTuneTitle state =
+  case (maybeTitle state.tuneResult) of
+     Just title ->
+       HH.div
+         [ HP.id_ "tune-title" ]
+         [ HH.h2
+            [HP.class_ (H.ClassName "center") ]
+            [HH.text title]
+         ]
+     _ ->
+        HH.text ""
 
 renderTempoSlider :: State ->  H.ParentHTML Query ChildQuery ChildSlot Aff
 renderTempoSlider state =
@@ -424,3 +469,8 @@ transposeTune s state =
       changeTune (transposeTo $ fromKeySig mks.keySignature) state
     Left _ ->
       Nothing
+
+-- | get the tune title if there is one
+maybeTitle :: Either PositionedParseError AbcTune -> Maybe String
+maybeTitle etune =
+  join $ map getTitle (hush etune)
