@@ -12,4 +12,4 @@ import Container as Container
 main :: Effect Unit
 main = HA.runHalogenAff do
   HA.awaitLoad
-  traverse_ (runUI Container.component unit) =<< HA.selectElement (QuerySelector "p")
+  traverse_ (runUI Container.component unit) =<< HA.selectElement (QuerySelector "#embed-ps-div")
