@@ -350,7 +350,7 @@ renderPrintButton state =
       , HP.class_ $ ClassName className
       , HP.enabled enabled
       ]
-      [ HH.text "print" ]        
+      [ HH.text "print" ]
 
 renderScore :: State -> H.ParentHTML Query ChildQuery ChildSlot Aff
 renderScore state =
@@ -365,7 +365,7 @@ renderScore state =
 
 renderTuneTitle :: State -> H.ParentHTML Query ChildQuery ChildSlot Aff
 renderTuneTitle state =
-  case (maybeTitle state.tuneResult) of
+  case (hush state.tuneResult >>= getTitle) of
      Just title ->
        HH.div
          [ HP.id_ "tune-title" ]
@@ -469,8 +469,3 @@ transposeTune s state =
       changeTune (transposeTo $ fromKeySig mks.keySignature) state
     Left _ ->
       Nothing
-
--- | get the tune title if there is one
-maybeTitle :: Either PositionedParseError AbcTune -> Maybe String
-maybeTitle etune =
-  join $ map getTitle (hush etune)

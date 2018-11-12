@@ -61,10 +61,6 @@ label {
   font-size: 1.0em;
 }
 
-#tune-title {
-  width: 1300px;
-  float: left;
-}
 
 .fileInputLabel {
   /* the label for a file input */
@@ -102,19 +98,4 @@ label {
   margin: 10px 0 0 0;
   font-size: 1.2em;
   font-family: Georgia, serif;
-}
-
-
-@media print {
-  body * {
-    visibility: hidden;
-  }
-  #score, #score * {
-    visibility: visible;
-  }
-  #score {
-    position: absolute;
-    left: 0;
-    top: 0;
-  }
 }

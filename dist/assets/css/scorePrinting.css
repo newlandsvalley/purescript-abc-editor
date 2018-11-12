@@ -1,0 +1,13 @@
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #score, #score * {
+    visibility: visible;
+  }
+  #score {
+    position: absolute;
+    left: 0;
+    top: 0;
+  }
+}
