@@ -61,6 +61,11 @@ label {
   font-size: 1.0em;
 }
 
+#tune-title {
+  width: 1200px;
+  float: left;
+  margin: 12px 0px 0px 0px;
+}
 
 .fileInputLabel {
   /* the label for a file input */
