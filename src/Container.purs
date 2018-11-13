@@ -22,7 +22,7 @@ import Data.Abc.Octave as Octave
 import Data.Abc.Tempo (defaultTempo, getBpm, setBpm)
 import Data.Abc.Accidentals (fromKeySig)
 import Data.Abc.Transposition (transposeTo)
-import VexFlow.Score (clearCanvas, renderTune, initialise) as Score
+import VexFlow.Score (clearCanvas, renderTune, initialiseCanvas) as Score
 import VexFlow.Types (Config)
 import Halogen as H
 import Halogen.Component.ChildPath as CP
@@ -199,7 +199,7 @@ component =
   eval (InitVex next) = do
     -- we split initialisation into two because Vex requires a rendering step
     -- before it can be initialised
-    _ <- H.liftEffect $ Score.initialise vexConfig
+    _ <- H.liftEffect $ Score.initialiseCanvas vexConfig
     pure next
   eval (HandleABCFile (FIC.FileLoaded filespec) next) = do
     _ <- H.modify (\st -> st { fileName = Just filespec.name } )
@@ -243,7 +243,7 @@ component =
     let
       abcTune = either (\_ -> emptyTune) (identity) r
     _ <- H.liftEffect $ Score.clearCanvas
-    rendered <- H.liftEffect $ Score.renderTune abcTune vexConfig
+    rendered <- H.liftEffect $ Score.renderTune vexConfig abcTune 
     _ <- H.modify (\st -> st { tuneResult = r, vexRendered = rendered } )
     pure next
   eval (HandleTuneIsPlaying (PC.IsPlaying p) next) = do
