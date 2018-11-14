@@ -22,8 +22,8 @@ import Data.Abc.Octave as Octave
 import Data.Abc.Tempo (defaultTempo, getBpm, setBpm)
 import Data.Abc.Accidentals (fromKeySig)
 import Data.Abc.Transposition (transposeTo)
-import VexFlow.Score (clearCanvas, renderTune, initialiseCanvas) as Score
-import VexFlow.Types (Config)
+import VexFlow.Score (clearCanvas, createScore, renderScore, initialiseCanvas) as Score
+import VexFlow.Types (Config, VexScore)
 import Halogen as H
 import Halogen.Component.ChildPath as CP
 import Halogen.HTML as HH
@@ -44,7 +44,9 @@ type State =
   { instruments :: Array Instrument
   , tuneResult :: Either PositionedParseError AbcTune
   , fileName :: Maybe String
+  , vexScore :: VexScore
   , vexRendered :: Boolean
+  , vexAligned :: Boolean
   }
 
 data Query a =
@@ -58,6 +60,7 @@ data Query a =
   | HandleTempoInput Int a
   | HandleTranspositionKey String a
   | HandleTuneIsPlaying PC.Message a
+  | HandleAlign a
   | HandlePrint a
 
 abcFileInputCtx :: FIC.Context
@@ -128,7 +131,9 @@ component =
     { instruments: []
     , tuneResult: ED.nullTune
     , fileName: Nothing
+    , vexScore: Left ""
     , vexRendered: false
+    , vexAligned: false
     }
 
   render :: State -> H.ParentHTML Query ChildQuery ChildSlot Aff
@@ -174,7 +179,8 @@ component =
         [ HP.class_ (H.ClassName "leftPanelComponent")]
         [ HH.label
            [ HP.class_ (H.ClassName "labelAlignment") ]
-           [ HH.text "print score:" ]
+           [ HH.text "score:" ]
+        , renderAlignButton state
         , renderPrintButton state
         ]
       , renderTempoSlider state
@@ -207,7 +213,10 @@ component =
     _ <- H.query' playerSlotNo unit $ H.action PC.StopMelody
     pure next
   eval (HandleClearButton (Button.Toggled _) next) = do
-    _ <- H.modify (\st -> st { fileName = Nothing } )
+    _ <- H.modify (\st -> st { fileName = Nothing
+                             , vexScore = Left ""
+                             , vexAligned = false
+                             } )
     _ <- H.query' editorSlotNo unit $ H.action (ED.UpdateContent "")
     pure next
   eval (HandleSaveButton (Button.Toggled _) next) = do
@@ -242,9 +251,15 @@ component =
     _ <- refreshPlayerState r
     let
       abcTune = either (\_ -> emptyTune) (identity) r
+      vexScore = Score.createScore vexConfig abcTune
     _ <- H.liftEffect $ Score.clearCanvas
-    rendered <- H.liftEffect $ Score.renderTune vexConfig abcTune 
-    _ <- H.modify (\st -> st { tuneResult = r, vexRendered = rendered } )
+    -- render the score with no RHS alignment
+    rendered <- H.liftEffect $ Score.renderScore vexConfig false vexScore
+    _ <- H.modify (\st -> st { tuneResult = r
+                             , vexRendered = rendered
+                             , vexScore = vexScore
+                             , vexAligned = false
+                             } )
     pure next
   eval (HandleTuneIsPlaying (PC.IsPlaying p) next) = do
     -- we ignore this message, but if we wanted to we could
@@ -255,6 +270,13 @@ component =
     _ <- H.query' abcFileSlotNo unit $ H.action (FIC.UpdateEnabled (not p))
     _ <- H.query' clearTextSlotNo unit $ H.action (Button.UpdateEnabled (not p))
     -}
+    pure next
+  eval (HandleAlign next) = do
+    state <- H.get
+    _ <- H.liftEffect $ Score.clearCanvas
+    -- render the score with RHS alignment
+    rendered <- H.liftEffect $ Score.renderScore vexConfig true state.vexScore
+    _ <- H.modify (\st -> st { vexAligned = true } )
     pure next
   eval (HandlePrint next) = do
     _ <-  H.liftEffect print
@@ -337,13 +359,28 @@ renderPlayer state =
       HH.div_
         [  ]
 
+renderAlignButton :: State -> H.ParentHTML Query ChildQuery ChildSlot Aff
+renderAlignButton state =
+  let
+    enabled =
+      either (\_ -> false) (\_ -> not state.vexAligned) state.tuneResult
+    className =
+      if enabled then "hoverable" else "unhoverable"
+  in
+    HH.button
+      [ HE.onClick (HE.input_ (HandleAlign))
+      , HP.class_ $ ClassName className
+      , HP.enabled enabled
+      ]
+      [ HH.text "align" ]
+
 renderPrintButton :: State -> H.ParentHTML Query ChildQuery ChildSlot Aff
 renderPrintButton state =
   let
     enabled =
       either (\_ -> false) (\_ -> true) state.tuneResult
     className =
-          either (\_ -> "unhoverable") (\_ -> "hoverable") state.tuneResult
+      if enabled then "hoverable" else "unhoverable"
   in
     HH.button
       [ HE.onClick (HE.input_ (HandlePrint))
