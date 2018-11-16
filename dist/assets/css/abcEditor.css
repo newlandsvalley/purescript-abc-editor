@@ -62,8 +62,9 @@ label {
 }
 
 #tune-title {
-  width: 1200px;
+  width: 800px;
   float: left;
+  text-align: left;
   margin: 12px 0px 0px 0px;
 }
 
@@ -73,13 +74,6 @@ label {
   /* padding: 1px 8px 0 8px; */
   font-size: 1.1em;
   display: inline-block;
-}
-
-.msCommitLabel {
-  /* need slightly more space for the multiple select label*/
-  display: inline-block;
-  width: 200px;
-  font-size: 1.2em;
 }
 
 .labelAlignment {

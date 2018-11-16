@@ -404,12 +404,9 @@ renderTuneTitle :: State -> H.ParentHTML Query ChildQuery ChildSlot Aff
 renderTuneTitle state =
   case (hush state.tuneResult >>= getTitle) of
      Just title ->
-       HH.div
-         [ HP.id_ "tune-title" ]
-         [ HH.h2
-            [HP.class_ (H.ClassName "center") ]
+         HH.h2
+            [HP.id_ "tune-title" ]
             [HH.text title]
-         ]
      _ ->
         HH.text ""
 
