@@ -10,7 +10,7 @@ import Data.Either.Nested (Either5)
 import Data.Functor.Coproduct.Nested (Coproduct5)
 import Data.Maybe (Maybe(..), fromJust, fromMaybe, isJust)
 import Data.List (List(..), null)
-import Data.Array (cons, singleton) as A
+import Data.Array (singleton) as A
 import Data.Int (fromString)
 import Data.MediaType (MediaType(..))
 import Data.Abc.Parser (PositionedParseError, parseKeySignature)
@@ -478,10 +478,7 @@ renderTranspositionMenu state =
             , HP.enabled enabled
             , HE.onValueChange  (HE.input HandleTranspositionKey)
             ]
-            (A.cons
-              (HH.option [  ] [ HH.text (showKeySig mks.keySignature)])
-              (map f $ keyMenuOptions mks.keySignature)
-            )
+            (map f $ keyMenuOptions mks.keySignature)
         ]
 
 -- Tune modication functions
