@@ -19,6 +19,7 @@ import Halogen.HTML.CSS (style)
 import CSS (color)
 import Color (rgb)
 
+
 type State =
   { text :: String
   , parseError :: Maybe PositionedParseError
@@ -102,6 +103,7 @@ renderParseError state =
         if (S.null state.text) then
           HH.div_ []
         else
+
           let
             -- display a prefix of 5 characters before the error (if they're there) and a suffix of 5 after
             startPhrase =
@@ -112,6 +114,7 @@ renderParseError state =
               min (pe.pos + 1) (A.length txt)
             endSuffix =
               min (pe.pos + textRange + 1) (A.length txt)
+
             errorSuffix =
               A.slice startSuffix endSuffix txt
             errorChar =
