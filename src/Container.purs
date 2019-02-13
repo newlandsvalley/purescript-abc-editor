@@ -23,6 +23,7 @@ import Data.Abc.Tempo (defaultTempo, getBpm, setBpm)
 import Data.Abc.Accidentals (fromKeySig)
 import Data.Abc.Transposition (transposeTo)
 import VexFlow.Score (clearCanvas, createScore, renderScore, initialiseCanvas) as Score
+import VexFlow.Abc.Alignment (rightJustify)
 import VexFlow.Types (Config, VexScore)
 import Halogen as H
 import Halogen.Component.ChildPath as CP
@@ -254,7 +255,7 @@ component =
       vexScore = Score.createScore vexConfig abcTune
     _ <- H.liftEffect $ Score.clearCanvas
     -- render the score with no RHS alignment
-    rendered <- H.liftEffect $ Score.renderScore vexConfig false vexScore
+    rendered <- H.liftEffect $ Score.renderScore vexConfig vexScore
     _ <- H.modify (\st -> st { tuneResult = r
                              , vexRendered = rendered
                              , vexScore = vexScore
@@ -274,8 +275,10 @@ component =
   eval (HandleAlign next) = do
     state <- H.get
     _ <- H.liftEffect $ Score.clearCanvas
-    -- render the score with RHS alignment
-    rendered <- H.liftEffect $ Score.renderScore vexConfig true state.vexScore
+    -- right justify the score
+    let
+      justifiedScore = rightJustify vexConfig.canvasWidth vexConfig.scale state.vexScore
+    rendered <- H.liftEffect $ Score.renderScore vexConfig justifiedScore
     _ <- H.modify (\st -> st { vexAligned = true } )
     pure next
   eval (HandlePrint next) = do
