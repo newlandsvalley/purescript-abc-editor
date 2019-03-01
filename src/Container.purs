@@ -4,42 +4,40 @@ import Prelude
 
 import Audio.SoundFont (Instrument, loadPianoSoundFont)
 import Audio.SoundFont.Melody.Class (MidiRecording(..))
-import Effect.Aff (Aff)
-import Data.Either (Either(..), either, hush, isLeft)
-import Data.Either.Nested (Either5)
-import Data.Functor.Coproduct.Nested (Coproduct5)
-import Data.Maybe (Maybe(..), fromJust, fromMaybe, isJust)
-import Data.List (List(..), null)
-import Data.Array (singleton) as A
-import Data.Int (fromString)
-import Data.MediaType (MediaType(..))
-import Data.Abc.Parser (PositionedParseError, parseKeySignature)
-import Data.Abc.Metadata (getKeySig, getTitle)
+import DOM.HTML.Indexed.InputAcceptType (mediaType)
 import Data.Abc (AbcTune)
-import Data.Abc.Midi (toMidi)
-import Data.Abc.Canonical (fromTune)
-import Data.Abc.Octave as Octave
-import Data.Abc.Tempo (defaultTempo, getBpm, setBpm)
 import Data.Abc.Accidentals (fromKeySig)
+import Data.Abc.Canonical (fromTune)
+import Data.Abc.Metadata (getKeySig, getTitle)
+import Data.Abc.Midi (toMidi)
+import Data.Abc.Octave as Octave
+import Data.Abc.Parser (PositionedParseError, parseKeySignature)
+import Data.Abc.Tempo (defaultTempo, getBpm, setBpm)
 import Data.Abc.Transposition (transposeTo)
-import VexFlow.Score (clearCanvas, createScore, renderScore, initialiseCanvas) as Score
-import VexFlow.Abc.Alignment (rightJustify)
-import VexFlow.Types (Config, VexScore)
+import Data.Array (singleton) as A
+import Data.Either (Either(..), either, hush, isLeft)
+import Data.Int (fromString)
+import Data.List (List(..), null)
+import Data.Maybe (Maybe(..), fromJust, fromMaybe, isJust)
+import Data.MediaType (MediaType(..))
+import Data.Symbol (SProxy(..))
+import Effect.Aff (Aff)
 import Halogen as H
-import Halogen.Component.ChildPath as CP
+import Halogen.EditorComponent as ED
+import Halogen.FileInputComponent as FIC
 import Halogen.HTML as HH
 import Halogen.HTML.Core (ClassName(..), HTML)
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Halogen.EditorComponent as ED
-import Halogen.FileInputComponent as FIC
-import Halogen.SimpleButtonComponent as Button
 import Halogen.PlayerComponent as PC
+import Halogen.SimpleButtonComponent as Button
 import JS.FileIO (Filespec, saveTextFile)
 import Partial.Unsafe (unsafePartial)
 import Transposition (MenuOption(..), keyMenuOptions, cMajor, showKeySig)
+import VexFlow.Abc.Alignment (rightJustify)
+import VexFlow.Score (clearCanvas, createScore, renderScore, initialiseCanvas) as Score
+import VexFlow.Types (Config, VexScore)
 import Window (print)
-
 
 type State =
   { instruments :: Array Instrument
@@ -50,26 +48,36 @@ type State =
   , vexAligned :: Boolean
   }
 
+data Action =
+    Init
+  | HandleABCFile FIC.Message
+  | HandleClearButton Button.Message
+  | HandleSaveButton Button.Message
+  | HandleNewTuneText ED.Message
+  | HandleMoveOctave Boolean
+  | HandleTempoInput Int
+  | HandleTranspositionKey String
+  | HandleTuneIsPlaying PC.Message
+  | HandleAlign
+  | HandlePrint
+
+-- the only reason that we need Query at all is that we need to chain
+-- InitInstrument followed by InitVex and this is only possible with Queries.
+-- Otherwise everything would be encoded as an Action.
+-- And the reason for this is that Vex requires a Div element to me rendered
+-- before it can be initialised.
+--
+-- Rendering takes place between the two initialisations.
 data Query a =
-    Init a
+    InitInstrument a
   | InitVex a
-  | HandleABCFile FIC.Message a
-  | HandleClearButton Button.Message a
-  | HandleSaveButton Button.Message a
-  | HandleNewTuneText ED.Message a
-  | HandleMoveOctave Boolean a
-  | HandleTempoInput Int a
-  | HandleTranspositionKey String a
-  | HandleTuneIsPlaying PC.Message a
-  | HandleAlign a
-  | HandlePrint a
 
 abcFileInputCtx :: FIC.Context
 abcFileInputCtx =
   { componentId : "abcinput"
   , isBinary : false
   , prompt : "choose file"
-  , accept : MediaType ".abc"
+  , accept :  mediaType (MediaType ".abc")
   }
 
 emptyTune :: AbcTune
@@ -84,51 +92,36 @@ vexConfig =
   , scale : 0.8
   }
 
--- the player is generic over a variety of playable sources of music
--- so we must specialize to MidiRecording
-type PlayerQuery = PC.Query MidiRecording
+type ChildSlots =
+  ( editor :: ED.Slot Unit
+  , abcfile :: FIC.Slot Unit
+  , clear :: Button.Slot Unit
+  , savefile :: Button.Slot Unit
+  , player :: (PC.Slot MidiRecording) Unit
+  )
 
-type ChildQuery = Coproduct5 ED.Query FIC.Query Button.Query Button.Query PlayerQuery
+_editor = SProxy :: SProxy "editor"
+_abcfile = SProxy :: SProxy "abcfile"
+_clear = SProxy :: SProxy "clear"
+_savefile = SProxy :: SProxy "savefile"
+_player = SProxy :: SProxy "player"
 
--- slots and slot numbers
-type FileInputSlot = Unit
-type PlayerSlot = Unit
-type ReplaceInstrumentsSlot = Unit
-type ClearTextSlot = Unit
-type SaveTextSlot = Unit
-type EditorSlot = Unit
-
-type ChildSlot = Either5 Unit Unit Unit Unit Unit
-
-editorSlotNo :: CP.ChildPath ED.Query ChildQuery EditorSlot ChildSlot
-editorSlotNo = CP.cp1
-
-abcFileSlotNo :: CP.ChildPath FIC.Query ChildQuery FileInputSlot ChildSlot
-abcFileSlotNo = CP.cp2
-
-clearTextSlotNo :: CP.ChildPath Button.Query ChildQuery ClearTextSlot ChildSlot
-clearTextSlotNo = CP.cp3
-
-saveTextSlotNo :: CP.ChildPath Button.Query ChildQuery SaveTextSlot ChildSlot
-saveTextSlotNo = CP.cp4
-
-playerSlotNo :: CP.ChildPath PlayerQuery ChildQuery PlayerSlot ChildSlot
-playerSlotNo = CP.cp5
-
-component ::  H.Component HH.HTML Query Unit Void Aff
+component :: forall i o. H.Component HH.HTML Query i o Aff
 component =
-  H.lifecycleParentComponent
-    { initialState: const initialState
+  H.mkComponent
+    { initialState
     , render
-    , eval
-    , initializer: Just (H.action Init)
-    , finalizer: Nothing
-    , receiver: const Nothing
+    , eval: H.mkEval $ H.defaultEval
+        { handleAction = handleAction
+        , handleQuery = handleQuery
+        , initialize = Just Init
+        , finalize = Nothing
+        }
     }
   where
 
-  initialState :: State
-  initialState =
+  initialState :: i -> State
+  initialState _ =
     { instruments: []
     , tuneResult: ED.nullTune
     , fileName: Nothing
@@ -137,7 +130,7 @@ component =
     , vexAligned: false
     }
 
-  render :: State -> H.ParentHTML Query ChildQuery ChildSlot Aff
+  render :: State -> H.ComponentHTML Action ChildSlots Aff
   render state = HH.div_
     [ HH.h1
         [HP.class_ (H.ClassName "center") ]
@@ -152,7 +145,7 @@ component =
          [ HH.label
             [ HP.class_ (H.ClassName "labelAlignment") ]
             [ HH.text "load ABC file:" ]
-         , HH.slot' abcFileSlotNo unit (FIC.component abcFileInputCtx) unit (HE.input HandleABCFile)
+         , HH.slot _abcfile unit (FIC.component abcFileInputCtx) unit (Just <<< HandleABCFile)
          ]
       , HH.div
           -- save
@@ -160,9 +153,9 @@ component =
           [ HH.label
              [ HP.class_ (H.ClassName "labelAlignment") ]
              [ HH.text "save or clear:" ]
-          , HH.slot' saveTextSlotNo unit (Button.component "save") unit (HE.input HandleSaveButton)
+          , HH.slot _savefile unit (Button.component "save") unit (Just <<< HandleSaveButton)
           -- clear
-          , HH.slot' clearTextSlotNo unit (Button.component "clear") unit (HE.input HandleClearButton)
+          , HH.slot _clear unit (Button.component "clear") unit (Just <<< HandleClearButton)
           ]
       , HH.div
          -- shift octave
@@ -192,124 +185,127 @@ component =
     , HH.div
         [ HP.class_ (H.ClassName "rightPane") ]
         [
-          HH.slot' editorSlotNo unit ED.component unit (HE.input HandleNewTuneText)
+          HH.slot _editor unit ED.component unit (Just <<< HandleNewTuneText)
         ]
     , renderScore state
     ]
 
-  eval :: Query ~> H.ParentDSL State Query ChildQuery ChildSlot Void Aff
-  eval (Init next) = do
-    -- instruments <- H.liftAff $  loadRemoteSoundFonts  [AcousticGrandPiano]
+  handleAction ∷ Action → H.HalogenM State Action ChildSlots o Aff Unit
+  handleAction = case _ of
+    Init -> do
+      -- defer to the query so we can chain them
+      _ <- handleQuery (InitInstrument unit)
+      pure unit
+    HandleABCFile (FIC.FileLoaded filespec) -> do
+      _ <- H.modify (\st -> st { fileName = Just filespec.name } )
+      _ <- H.query _editor unit $ H.tell (ED.UpdateContent filespec.contents)
+      _ <- H.query _player unit $ H.tell PC.StopMelody
+      pure unit
+    HandleClearButton (Button.Toggled _) -> do
+      _ <- H.modify (\st -> st { fileName = Nothing
+                               , vexScore = Left ""
+                               , vexAligned = false
+                               } )
+      _ <- H.query _editor unit $ H.tell (ED.UpdateContent "")
+      pure unit
+    HandleSaveButton (Button.Toggled _) -> do
+      maybeText <- H.query _editor unit $ H.request ED.GetText
+      state <- H.get
+      let
+        fileName = getFileName state
+        text = fromMaybe "" maybeText
+        fsp = { name: fileName, contents : text} :: Filespec
+      _ <- H.liftEffect $ saveTextFile fsp
+      pure unit
+    HandleTempoInput bpm -> do
+      state <- H.get
+      let
+        maybeText = changeTune (setBpm bpm) state
+      _ <- onNewTuneText maybeText
+      pure unit
+    HandleMoveOctave isUp -> do
+      state <- H.get
+      let
+        maybeText = changeTune (Octave.move isUp) state
+      _ <- onNewTuneText maybeText
+      pure unit
+    HandleTranspositionKey keyString -> do
+      state <- H.get
+      let
+        maybeText = transposeTune keyString state
+      _ <- onNewTuneText maybeText
+      pure unit
+    HandleNewTuneText (ED.TuneResult r) -> do
+      _ <- refreshPlayerState r
+      let
+        abcTune = either (\_ -> emptyTune) (identity) r
+        vexScore = Score.createScore vexConfig abcTune
+      _ <- H.liftEffect $ Score.clearCanvas
+      -- render the score with no RHS alignment
+      rendered <- H.liftEffect $ Score.renderScore vexConfig vexScore
+      _ <- H.modify (\st -> st { tuneResult = r
+                               , vexRendered = rendered
+                               , vexScore = vexScore
+                               , vexAligned = false
+                               } )
+      pure unit
+    HandleTuneIsPlaying (PC.IsPlaying p) -> do
+      -- we ignore this message, but if we wanted to we could
+      -- disable any button that can alter the editor contents whilst the player
+      -- is playing and re-enable when it stops playing
+      pure unit
+    HandleAlign -> do
+      state <- H.get
+      _ <- H.liftEffect $ Score.clearCanvas
+      -- right justify the score
+      let
+        justifiedScore = rightJustify vexConfig.canvasWidth vexConfig.scale state.vexScore
+      rendered <- H.liftEffect $ Score.renderScore vexConfig justifiedScore
+      _ <- H.modify (\st -> st { vexAligned = true } )
+      pure unit
+    HandlePrint -> do
+      _ <-  H.liftEffect print
+      pure unit
+
+handleQuery :: ∀ o a . Query a -> H.HalogenM State Action ChildSlots o Aff (Maybe a)
+handleQuery = case _ of
+  InitInstrument next -> do
     instrument <- H.liftAff $ loadPianoSoundFont "assets/soundfonts"
     _ <- H.modify (\st -> st { instruments = A.singleton instrument } )
-    eval (InitVex next)
-  eval (InitVex next) = do
+    handleQuery (InitVex next)
+  InitVex next -> do
     -- we split initialisation into two because Vex requires a rendering step
     -- before it can be initialised
     _ <- H.liftEffect $ Score.initialiseCanvas vexConfig
-    pure next
-  eval (HandleABCFile (FIC.FileLoaded filespec) next) = do
-    _ <- H.modify (\st -> st { fileName = Just filespec.name } )
-    _ <- H.query' editorSlotNo unit $ H.action (ED.UpdateContent filespec.contents)
-    _ <- H.query' playerSlotNo unit $ H.action PC.StopMelody
-    pure next
-  eval (HandleClearButton (Button.Toggled _) next) = do
-    _ <- H.modify (\st -> st { fileName = Nothing
-                             , vexScore = Left ""
-                             , vexAligned = false
-                             } )
-    _ <- H.query' editorSlotNo unit $ H.action (ED.UpdateContent "")
-    pure next
-  eval (HandleSaveButton (Button.Toggled _) next) = do
-    maybeText <- H.query' editorSlotNo unit (H.request ED.GetText)
-    state <- H.get
-    let
-      fileName = getFileName state
-      text = fromMaybe "" maybeText
-      fsp = { name: fileName, contents : text} :: Filespec
-    _ <- H.liftEffect $ saveTextFile fsp
-    pure next
-  eval (HandleTempoInput bpm  next) = do
-    state <- H.get
-    let
-      maybeText = changeTune (setBpm bpm) state
-    _ <- onNewTuneText maybeText
-    pure next
-  -- eval (HandleMoveOctave isUp (Button.Toggled _) next) = do
-  eval (HandleMoveOctave isUp next) = do
-    state <- H.get
-    let
-      maybeText = changeTune (Octave.move isUp) state
-    _ <- onNewTuneText maybeText
-    pure next
-  eval (HandleTranspositionKey keyString next) = do
-    state <- H.get
-    let
-      maybeText = transposeTune keyString state
-    _ <- onNewTuneText maybeText
-    pure next
-  eval (HandleNewTuneText (ED.TuneResult r) next) = do
-    _ <- refreshPlayerState r
-    let
-      abcTune = either (\_ -> emptyTune) (identity) r
-      vexScore = Score.createScore vexConfig abcTune
-    _ <- H.liftEffect $ Score.clearCanvas
-    -- render the score with no RHS alignment
-    rendered <- H.liftEffect $ Score.renderScore vexConfig vexScore
-    _ <- H.modify (\st -> st { tuneResult = r
-                             , vexRendered = rendered
-                             , vexScore = vexScore
-                             , vexAligned = false
-                             } )
-    pure next
-  eval (HandleTuneIsPlaying (PC.IsPlaying p) next) = do
-    -- we ignore this message, but if we wanted to we could
-    -- disable any button that can alter the editor contents whilst the player
-    -- is playing and re-enable when it stops playing
-    {-
-    _ <- H.query' editorSlotNo unit $ H.action (ED.UpdateEnabled (not p))
-    _ <- H.query' abcFileSlotNo unit $ H.action (FIC.UpdateEnabled (not p))
-    _ <- H.query' clearTextSlotNo unit $ H.action (Button.UpdateEnabled (not p))
-    -}
-    pure next
-  eval (HandleAlign next) = do
-    state <- H.get
-    _ <- H.liftEffect $ Score.clearCanvas
-    -- right justify the score
-    let
-      justifiedScore = rightJustify vexConfig.canvasWidth vexConfig.scale state.vexScore
-    rendered <- H.liftEffect $ Score.renderScore vexConfig justifiedScore
-    _ <- H.modify (\st -> st { vexAligned = true } )
-    pure next
-  eval (HandlePrint next) = do
-    _ <-  H.liftEffect print
-    pure next
+    pure (Just next)
 
 -- | synchronize child components whenever we might have a change in tune text
 -- | which emanates from OUTSIDE of the editor component
 -- | (e.g. as the result of a tempo change, transposition or octave change)
-onNewTuneText :: Maybe String -> H.ParentDSL State Query ChildQuery ChildSlot Void Aff Unit
+onNewTuneText :: ∀ o. Maybe String -> H.HalogenM State Action ChildSlots o Aff Unit
 onNewTuneText maybeText = do
   if (isJust maybeText)
    then do
      let
        tuneText = unsafePartial $ fromJust maybeText
-     _ <- H.query' editorSlotNo unit $ H.action (ED.UpdateContent tuneText)
-     _ <- H.query' playerSlotNo unit $ H.action PC.StopMelody
+     -- _ <- H.query' editorSlotNo unit $ H.action (ED.UpdateContent tuneText)
+     -- _ <- H.query' playerSlotNo unit $ H.action PC.StopMelody
+     _ <- H.query _editor unit $ H.tell (ED.UpdateContent tuneText)
+     _ <- H.query _player unit $ H.tell PC.StopMelody
      pure unit
    else
      pure unit
 
 -- refresh the state of the player by passing it the tune result
 -- (if it had parsed OK)
-refreshPlayerState ::
+refreshPlayerState :: ∀ o.
        Either PositionedParseError AbcTune
-    -> H.ParentDSL State Query ChildQuery ChildSlot Void Aff Unit
+    -> H.HalogenM State Action ChildSlots o Aff Unit
 refreshPlayerState tuneResult = do
   _ <- either
-    (\_ -> H.query' playerSlotNo unit $ H.action (PC.StopMelody))
-    (\abcTune -> H.query' playerSlotNo unit $ H.action (PC.HandleNewPlayable (toPlayable abcTune)))
-    tuneResult
+     (\_ -> H.query _player unit $ H.tell PC.StopMelody)
+     (\abcTune -> H.query _player unit $ H.tell (PC.HandleNewPlayable (toPlayable abcTune)))
+     tuneResult
   pure unit
 
 -- helpers
@@ -332,7 +328,7 @@ toPlayable abcTune =
    MidiRecording $ toMidi abcTune
 
 -- rendering functions
-renderOctaveButton :: Boolean -> State -> H.ParentHTML Query ChildQuery ChildSlot Aff
+renderOctaveButton :: Boolean -> State -> H.ComponentHTML Action ChildSlots Aff
 renderOctaveButton isUp state =
   let
     enabled =
@@ -345,24 +341,24 @@ renderOctaveButton isUp state =
         else "down"
   in
     HH.button
-      [ HE.onClick (HE.input_ (HandleMoveOctave isUp))
+      [ HE.onClick \_ -> Just (HandleMoveOctave isUp)
       , HP.class_ $ ClassName className
       , HP.enabled enabled
       ]
       [ HH.text label ]
 
-renderPlayer ::  State -> H.ParentHTML Query ChildQuery ChildSlot Aff
+renderPlayer ::  State -> H.ComponentHTML Action ChildSlots Aff
 renderPlayer state =
   case state.tuneResult of
     Right abcTune ->
       HH.div
         [ HP.class_ (H.ClassName "leftPanelComponent")]
-        [ HH.slot' playerSlotNo unit (PC.component (toPlayable abcTune) state.instruments) unit (HE.input HandleTuneIsPlaying)  ]
+        [ HH.slot _player unit (PC.component (toPlayable abcTune) state.instruments) unit (Just <<< HandleTuneIsPlaying) ]
     Left err ->
       HH.div_
         [  ]
 
-renderAlignButton :: State -> H.ParentHTML Query ChildQuery ChildSlot Aff
+renderAlignButton :: State -> H.ComponentHTML Action ChildSlots Aff
 renderAlignButton state =
   let
     enabled =
@@ -371,13 +367,13 @@ renderAlignButton state =
       if enabled then "hoverable" else "unhoverable"
   in
     HH.button
-      [ HE.onClick (HE.input_ (HandleAlign))
+      [ HE.onClick \_ -> Just HandleAlign
       , HP.class_ $ ClassName className
       , HP.enabled enabled
       ]
       [ HH.text "align" ]
 
-renderPrintButton :: State -> H.ParentHTML Query ChildQuery ChildSlot Aff
+renderPrintButton :: State -> H.ComponentHTML Action ChildSlots Aff
 renderPrintButton state =
   let
     enabled =
@@ -386,13 +382,13 @@ renderPrintButton state =
       if enabled then "hoverable" else "unhoverable"
   in
     HH.button
-      [ HE.onClick (HE.input_ (HandlePrint))
+      [ HE.onClick \_ -> Just HandlePrint
       , HP.class_ $ ClassName className
       , HP.enabled enabled
       ]
       [ HH.text "print" ]
 
-renderScore :: State -> H.ParentHTML Query ChildQuery ChildSlot Aff
+renderScore :: State -> H.ComponentHTML Action ChildSlots Aff
 renderScore state =
   HH.div
     [ HP.id_ "score"]
@@ -403,7 +399,7 @@ renderScore state =
          ] []
     ]
 
-renderTuneTitle :: State -> H.ParentHTML Query ChildQuery ChildSlot Aff
+renderTuneTitle :: State -> H.ComponentHTML Action ChildSlots Aff
 renderTuneTitle state =
   case (hush state.tuneResult >>= getTitle) of
      Just title ->
@@ -413,7 +409,7 @@ renderTuneTitle state =
      _ ->
         HH.text ""
 
-renderTempoSlider :: State ->  H.ParentHTML Query ChildQuery ChildSlot Aff
+renderTempoSlider :: State -> H.ComponentHTML Action ChildSlots Aff
 renderTempoSlider state =
   let
     startBpm =
@@ -435,7 +431,7 @@ renderTempoSlider state =
          [ HH.text "change tempo:" ]
 
       , HH.input
-          [ HE.onValueInput (HE.input HandleTempoInput <<< toTempo)
+          [ HE.onValueInput  (Just <<< HandleTempoInput <<< toTempo)
           , HP.type_ HP.InputRange
           , HP.id_ "tempo-slider"
           , HP.min 10.0
@@ -445,7 +441,7 @@ renderTempoSlider state =
           ]
       ]
 
-renderTranspositionMenu :: State ->  H.ParentHTML Query ChildQuery ChildSlot Aff
+renderTranspositionMenu :: State -> H.ComponentHTML Action ChildSlots Aff
 renderTranspositionMenu state =
     let
       f :: ∀ p i. MenuOption -> HTML p i
@@ -479,7 +475,7 @@ renderTranspositionMenu state =
             , HP.id_  "transposition-menu"
             , HP.value (showKeySig mks.keySignature)
             , HP.enabled enabled
-            , HE.onValueChange  (HE.input HandleTranspositionKey)
+            , HE.onValueChange (Just <<< HandleTranspositionKey)
             ]
             (map f $ keyMenuOptions mks.keySignature)
         ]
