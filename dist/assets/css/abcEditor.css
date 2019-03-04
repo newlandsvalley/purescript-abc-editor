@@ -79,8 +79,8 @@ label {
 .labelAlignment {
   /* align labels at the LHS of a frame */
   display: inline-block;
-  width: 165px;
-  font-size: 1.2em;
+  width: 175px;
+  font-size: 1.1em;
 }
 
 .leftPane {

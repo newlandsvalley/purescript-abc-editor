@@ -352,7 +352,9 @@ renderPlayer state =
   case state.tuneResult of
     Right abcTune ->
       HH.div
-        [ HP.class_ (H.ClassName "leftPanelComponent")]
+        [ HP.class_ (H.ClassName "leftPanelComponent")
+        , HP.id_  "player-div"
+        ]
         [ HH.slot _player unit (PC.component (toPlayable abcTune) state.instruments) unit (Just <<< HandleTuneIsPlaying) ]
     Left err ->
       HH.div_
