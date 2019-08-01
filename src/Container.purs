@@ -35,7 +35,7 @@ import JS.FileIO (Filespec, saveTextFile)
 import Partial.Unsafe (unsafePartial)
 import Transposition (MenuOption(..), keyMenuOptions, cMajor, showKeySig)
 import VexFlow.Abc.Alignment (rightJustify)
-import VexFlow.Score (clearCanvas, createScore, renderScore, initialiseCanvas) as Score
+import VexFlow.Score (Renderer, clearCanvas, createScore, renderScore, initialiseCanvas) as Score
 import VexFlow.Types (Config, VexScore)
 import Window (print)
 
@@ -43,6 +43,7 @@ type State =
   { instruments :: Array Instrument
   , tuneResult :: Either PositionedParseError AbcTune
   , fileName :: Maybe String
+  , vexRenderer :: Maybe Score.Renderer
   , vexScore :: VexScore
   , vexRendered :: Boolean
   , vexAligned :: Boolean
@@ -125,6 +126,7 @@ component =
     { instruments: []
     , tuneResult: ED.nullTune
     , fileName: Nothing
+    , vexRenderer: Nothing
     , vexScore: Left ""
     , vexRendered: false
     , vexAligned: false
@@ -237,18 +239,23 @@ component =
       pure unit
     HandleNewTuneText (ED.TuneResult r) -> do
       _ <- refreshPlayerState r
+      state <- H.get
       let
         abcTune = either (\_ -> emptyTune) (identity) r
         vexScore = Score.createScore vexConfig abcTune
-      _ <- H.liftEffect $ Score.clearCanvas
-      -- render the score with no RHS alignment
-      rendered <- H.liftEffect $ Score.renderScore vexConfig vexScore
-      _ <- H.modify (\st -> st { tuneResult = r
-                               , vexRendered = rendered
-                               , vexScore = vexScore
-                               , vexAligned = false
-                               } )
-      pure unit
+      case state.vexRenderer of
+        Just renderer -> do
+          _ <- H.liftEffect $ Score.clearCanvas $ renderer
+          -- render the score with no RHS alignment
+          rendered <- H.liftEffect $ Score.renderScore vexConfig renderer vexScore
+          _ <- H.modify (\st -> st { tuneResult = r
+                                   , vexRendered = rendered
+                                   , vexScore = vexScore
+                                   , vexAligned = false
+                                   } )
+          pure unit
+        _ ->
+          pure unit
     HandleTuneIsPlaying (PC.IsPlaying p) -> do
       -- we ignore this message, but if we wanted to we could
       -- disable any button that can alter the editor contents whilst the player
@@ -256,13 +263,17 @@ component =
       pure unit
     HandleAlign -> do
       state <- H.get
-      _ <- H.liftEffect $ Score.clearCanvas
-      -- right justify the score
-      let
-        justifiedScore = rightJustify vexConfig.canvasWidth vexConfig.scale state.vexScore
-      rendered <- H.liftEffect $ Score.renderScore vexConfig justifiedScore
-      _ <- H.modify (\st -> st { vexAligned = true } )
-      pure unit
+      case state.vexRenderer of
+        Just renderer -> do
+          _ <- H.liftEffect $ Score.clearCanvas renderer
+          -- right justify the score
+          let
+            justifiedScore = rightJustify vexConfig.canvasWidth vexConfig.scale state.vexScore
+          rendered <- H.liftEffect $ Score.renderScore vexConfig renderer justifiedScore
+          _ <- H.modify (\st -> st { vexAligned = true } )
+          pure unit
+        _ ->
+          pure unit
     HandlePrint -> do
       _ <-  H.liftEffect print
       pure unit
@@ -276,7 +287,8 @@ handleQuery = case _ of
   InitVex next -> do
     -- we split initialisation into two because Vex requires a rendering step
     -- before it can be initialised
-    _ <- H.liftEffect $ Score.initialiseCanvas vexConfig
+    renderer <- H.liftEffect $ Score.initialiseCanvas vexConfig
+    _ <- H.modify (\st -> st { vexRenderer = Just renderer } )
     pure (Just next)
 
 -- | synchronize child components whenever we might have a change in tune text
