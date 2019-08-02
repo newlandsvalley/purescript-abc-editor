@@ -87,10 +87,11 @@ emptyTune =
 
 vexConfig :: Config
 vexConfig =
-  { canvasDivId : "vexflow"
-  , canvasWidth : 1300
-  , canvasHeight : 700
+  { parentElementId : "vexflow"
+  , width : 1300
+  , height : 700
   , scale : 0.8
+  , isSVG : true
   }
 
 type ChildSlots =
@@ -268,7 +269,7 @@ component =
           _ <- H.liftEffect $ Score.clearCanvas renderer
           -- right justify the score
           let
-            justifiedScore = rightJustify vexConfig.canvasWidth vexConfig.scale state.vexScore
+            justifiedScore = rightJustify vexConfig.width vexConfig.scale state.vexScore
           rendered <- H.liftEffect $ Score.renderScore vexConfig renderer justifiedScore
           _ <- H.modify (\st -> st { vexAligned = true } )
           pure unit
