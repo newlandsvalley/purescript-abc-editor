@@ -1,4 +1,4 @@
-module Window (print) where
+module Editor.Window (print) where
 
 import Prelude (Unit)
 import Effect (Effect)

@@ -1,4 +1,4 @@
-module Transposition
+module Editor.Transposition
   (MenuOption(..), keyMenuOptions, cMajor, showKeySig) where
 
 import Data.Abc (Accidental(..), ModifiedKeySignature, KeySignature, Mode(..), Pitch(..), PitchClass(..))

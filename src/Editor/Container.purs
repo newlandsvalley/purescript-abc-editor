@@ -1,4 +1,4 @@
-module Container where
+module Editor.Container where
 
 import Prelude
 
@@ -23,7 +23,7 @@ import Data.MediaType (MediaType(..))
 import Data.Symbol (SProxy(..))
 import Effect.Aff (Aff)
 import Halogen as H
-import Halogen.EditorComponent as ED
+import Editor.Component as ED
 import Halogen.FileInputComponent as FIC
 import Halogen.HTML as HH
 import Halogen.HTML.Core (ClassName(..), HTML)
@@ -33,11 +33,11 @@ import Halogen.PlayerComponent as PC
 import Halogen.SimpleButtonComponent as Button
 import JS.FileIO (Filespec, saveTextFile)
 import Partial.Unsafe (unsafePartial)
-import Transposition (MenuOption(..), keyMenuOptions, cMajor, showKeySig)
+import Editor.Transposition (MenuOption(..), keyMenuOptions, cMajor, showKeySig)
 import VexFlow.Abc.Alignment (rightJustify)
 import VexFlow.Score (Renderer, clearCanvas, createScore, renderScore, initialiseCanvas) as Score
 import VexFlow.Types (Config, VexScore)
-import Window (print)
+import Editor.Window (print)
 
 type State =
   { instruments :: Array Instrument
