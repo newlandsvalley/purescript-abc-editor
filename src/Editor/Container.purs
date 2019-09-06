@@ -20,7 +20,7 @@ import Data.List (List(..), null)
 import Data.Maybe (Maybe(..), fromJust, fromMaybe, isJust)
 import Data.MediaType (MediaType(..))
 import Data.Symbol (SProxy(..))
-import Effect.Aff (Aff)
+import Effect.Aff.Class (class MonadAff)
 import Data.Const (Const)
 import Halogen as H
 import Editor.EditorComponent as ED
@@ -114,7 +114,7 @@ _clear = SProxy :: SProxy "clear"
 _savefile = SProxy :: SProxy "savefile"
 _player = SProxy :: SProxy "player"
 
-component :: forall o. H.Component HH.HTML Query Input o Aff
+component :: ∀ o m. MonadAff m => H.Component HH.HTML Query Input o m
 component =
   H.mkComponent
     { initialState
@@ -139,7 +139,7 @@ component =
     , vexAligned: false
     }
 
-  render :: State -> H.ComponentHTML Action ChildSlots Aff
+  render :: State -> H.ComponentHTML Action ChildSlots m
   render state = HH.div_
     [ HH.h1
         [HP.class_ (H.ClassName "center") ]
@@ -199,7 +199,7 @@ component =
     , renderScore state
     ]
 
-  handleAction ∷ Action → H.HalogenM State Action ChildSlots o Aff Unit
+  handleAction ∷ Action → H.HalogenM State Action ChildSlots o m Unit
   handleAction = case _ of
     Init -> do
       -- defer to the query so we can chain them
@@ -285,23 +285,26 @@ component =
       _ <-  H.liftEffect print
       pure unit
 
-handleQuery :: ∀ o a . Query a -> H.HalogenM State Action ChildSlots o Aff (Maybe a)
-handleQuery = case _ of
-  InitDummy next -> do
-    -- a completely artificial state change, forcing our first render
-    _ <- H.modify (\st -> st { vexRenderer = Nothing } )
-    handleQuery (InitVex next)
-  InitVex next -> do
-    -- we split initialisation into two because Vex requires a rendering step
-    -- before it can be initialised
-    renderer <- H.liftEffect $ Score.initialiseCanvas vexConfig
-    _ <- H.modify (\st -> st { vexRenderer = Just renderer } )
-    pure (Just next)
+  handleQuery :: ∀ o a . Query a -> H.HalogenM State Action ChildSlots o m (Maybe a)
+  handleQuery = case _ of
+    InitDummy next -> do
+      -- a completely artificial state change, forcing our first render
+      _ <- H.modify (\st -> st { vexRenderer = Nothing } )
+      handleQuery (InitVex next)
+    InitVex next -> do
+      -- we split initialisation into two because Vex requires a rendering step
+      -- before it can be initialised
+      renderer <- H.liftEffect $ Score.initialiseCanvas vexConfig
+      _ <- H.modify (\st -> st { vexRenderer = Just renderer } )
+      pure (Just next)
 
 -- | synchronize child components whenever we might have a change in tune text
 -- | which emanates from OUTSIDE of the editor component
 -- | (e.g. as the result of a tempo change, transposition or octave change)
-onNewTuneText :: ∀ o. Maybe String -> H.HalogenM State Action ChildSlots o Aff Unit
+onNewTuneText :: ∀ o m
+  . MonadAff m
+  => Maybe String
+  -> H.HalogenM State Action ChildSlots o m Unit
 onNewTuneText maybeText = do
   if (isJust maybeText)
    then do
@@ -317,9 +320,10 @@ onNewTuneText maybeText = do
 
 -- refresh the state of the player by passing it the tune result
 -- (if it had parsed OK)
-refreshPlayerState :: ∀ o.
-       Either PositionedParseError AbcTune
-    -> H.HalogenM State Action ChildSlots o Aff Unit
+refreshPlayerState :: ∀ o m
+    . MonadAff m
+    => Either PositionedParseError AbcTune
+    -> H.HalogenM State Action ChildSlots o m Unit
 refreshPlayerState tuneResult = do
   _ <- either
      (\_ -> H.query _player unit $ H.tell PC.StopMelody)
@@ -347,7 +351,11 @@ toPlayable abcTune =
    MidiRecording $ toMidi abcTune
 
 -- rendering functions
-renderOctaveButton :: Boolean -> State -> H.ComponentHTML Action ChildSlots Aff
+renderOctaveButton :: ∀ m
+  . MonadAff m
+  => Boolean
+  -> State
+  -> H.ComponentHTML Action ChildSlots m
 renderOctaveButton isUp state =
   let
     enabled =
@@ -366,7 +374,10 @@ renderOctaveButton isUp state =
       ]
       [ HH.text label ]
 
-renderPlayer ::  State -> H.ComponentHTML Action ChildSlots Aff
+renderPlayer ::  ∀ m
+  . MonadAff m
+  => State
+  -> H.ComponentHTML Action ChildSlots m
 renderPlayer state =
   case state.tuneResult of
     Right abcTune ->
@@ -379,7 +390,10 @@ renderPlayer state =
       HH.div_
         [  ]
 
-renderAlignButton :: State -> H.ComponentHTML Action ChildSlots Aff
+renderAlignButton :: ∀ m
+  . MonadAff m
+  => State
+  -> H.ComponentHTML Action ChildSlots m
 renderAlignButton state =
   let
     enabled =
@@ -394,7 +408,10 @@ renderAlignButton state =
       ]
       [ HH.text "align" ]
 
-renderPrintButton :: State -> H.ComponentHTML Action ChildSlots Aff
+renderPrintButton :: ∀ m
+  . MonadAff m
+  => State
+  -> H.ComponentHTML Action ChildSlots m
 renderPrintButton state =
   let
     enabled =
@@ -409,7 +426,10 @@ renderPrintButton state =
       ]
       [ HH.text "print" ]
 
-renderScore :: State -> H.ComponentHTML Action ChildSlots Aff
+renderScore :: ∀ m
+  . MonadAff m
+  => State
+  -> H.ComponentHTML Action ChildSlots m
 renderScore state =
   HH.div
     [ HP.id_ "score"]
@@ -420,7 +440,10 @@ renderScore state =
          ] []
     ]
 
-renderTuneTitle :: State -> H.ComponentHTML Action ChildSlots Aff
+renderTuneTitle :: ∀ m
+  . MonadAff m
+  => State
+  -> H.ComponentHTML Action ChildSlots m
 renderTuneTitle state =
   case (hush state.tuneResult >>= getTitle) of
      Just title ->
@@ -430,7 +453,10 @@ renderTuneTitle state =
      _ ->
         HH.text ""
 
-renderTempoSlider :: State -> H.ComponentHTML Action ChildSlots Aff
+renderTempoSlider :: ∀ m
+  . MonadAff m
+  => State
+  -> H.ComponentHTML Action ChildSlots m
 renderTempoSlider state =
   let
     startBpm =
@@ -462,7 +488,10 @@ renderTempoSlider state =
           ]
       ]
 
-renderTranspositionMenu :: State -> H.ComponentHTML Action ChildSlots Aff
+renderTranspositionMenu :: ∀ m
+  . MonadAff m
+  => State
+  -> H.ComponentHTML Action ChildSlots m
 renderTranspositionMenu state =
     let
       f :: ∀ p i. MenuOption -> HTML p i
