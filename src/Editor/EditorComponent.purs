@@ -1,4 +1,6 @@
-module Editor.Component where
+module Editor.EditorComponent where
+
+-- the actual editoing window
 
 import Prelude
 

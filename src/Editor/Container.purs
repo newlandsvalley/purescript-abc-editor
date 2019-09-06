@@ -2,7 +2,7 @@ module Editor.Container where
 
 import Prelude
 
-import Audio.SoundFont (Instrument, loadPianoSoundFont)
+import Audio.SoundFont (Instrument)
 import Audio.SoundFont.Melody.Class (MidiRecording(..))
 import DOM.HTML.Indexed.InputAcceptType (mediaType)
 import Data.Abc (AbcTune)
@@ -14,7 +14,6 @@ import Data.Abc.Octave as Octave
 import Data.Abc.Parser (PositionedParseError, parseKeySignature)
 import Data.Abc.Tempo (defaultTempo, getBpm, setBpm)
 import Data.Abc.Transposition (transposeTo)
-import Data.Array (singleton) as A
 import Data.Either (Either(..), either, hush, isLeft)
 import Data.Int (fromString)
 import Data.List (List(..), null)
@@ -22,8 +21,9 @@ import Data.Maybe (Maybe(..), fromJust, fromMaybe, isJust)
 import Data.MediaType (MediaType(..))
 import Data.Symbol (SProxy(..))
 import Effect.Aff (Aff)
+import Data.Const (Const)
 import Halogen as H
-import Editor.Component as ED
+import Editor.EditorComponent as ED
 import Halogen.FileInputComponent as FIC
 import Halogen.HTML as HH
 import Halogen.HTML.Core (ClassName(..), HTML)
@@ -39,6 +39,8 @@ import VexFlow.Score (Renderer, clearCanvas, createScore, renderScore, initialis
 import VexFlow.Types (Config, VexScore)
 import Editor.Window (print)
 
+type Slot = H.Slot (Const Void) Void
+
 type State =
   { instruments :: Array Instrument
   , tuneResult :: Either PositionedParseError AbcTune
@@ -48,6 +50,10 @@ type State =
   , vexRendered :: Boolean
   , vexAligned :: Boolean
   }
+
+type Input =
+  { instruments :: Array Instrument }
+
 
 data Action =
     Init
@@ -63,14 +69,14 @@ data Action =
   | HandlePrint
 
 -- the only reason that we need Query at all is that we need to chain
--- InitInstrument followed by InitVex and this is only possible with Queries.
+-- InitDummy followed by InitVex and this is only possible with Queries.
 -- Otherwise everything would be encoded as an Action.
 -- And the reason for this is that Vex requires a Div element to me rendered
 -- before it can be initialised.
 --
 -- Rendering takes place between the two initialisations.
 data Query a =
-    InitInstrument a
+    InitDummy a
   | InitVex a
 
 abcFileInputCtx :: FIC.Context
@@ -108,7 +114,7 @@ _clear = SProxy :: SProxy "clear"
 _savefile = SProxy :: SProxy "savefile"
 _player = SProxy :: SProxy "player"
 
-component :: forall i o. H.Component HH.HTML Query i o Aff
+component :: forall o. H.Component HH.HTML Query Input o Aff
 component =
   H.mkComponent
     { initialState
@@ -122,9 +128,9 @@ component =
     }
   where
 
-  initialState :: i -> State
-  initialState _ =
-    { instruments: []
+  initialState :: Input -> State
+  initialState input =
+    { instruments: input.instruments
     , tuneResult: ED.nullTune
     , fileName: Nothing
     , vexRenderer: Nothing
@@ -197,7 +203,7 @@ component =
   handleAction = case _ of
     Init -> do
       -- defer to the query so we can chain them
-      _ <- handleQuery (InitInstrument unit)
+      _ <- handleQuery (InitDummy unit)
       pure unit
     HandleABCFile (FIC.FileLoaded filespec) -> do
       _ <- H.modify (\st -> st { fileName = Just filespec.name } )
@@ -281,9 +287,9 @@ component =
 
 handleQuery :: ∀ o a . Query a -> H.HalogenM State Action ChildSlots o Aff (Maybe a)
 handleQuery = case _ of
-  InitInstrument next -> do
-    instrument <- H.liftAff $ loadPianoSoundFont "assets/soundfonts"
-    _ <- H.modify (\st -> st { instruments = A.singleton instrument } )
+  InitDummy next -> do
+    -- a completely artificial state change, forcing our first render
+    _ <- H.modify (\st -> st { vexRenderer = Nothing } )
     handleQuery (InitVex next)
   InitVex next -> do
     -- we split initialisation into two because Vex requires a rendering step
