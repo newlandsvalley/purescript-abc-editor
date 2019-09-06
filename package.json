@@ -1,8 +1,8 @@
 {
   "private": true,
   "scripts": {
-    "build": "pulp build --to dist/abc-editor.js",
-    "minimize": "uglifyjs dist/abc-editor.js --output dist/min.js --compress",
+    "build": "pulp build",
+    "example": "pulp build --main Example.Main --include example/src --to example/dist/abc-editor.js",
     "watch": "pulp -w build --to dist/abc-editor.js"
   },
   "devDependencies": {
