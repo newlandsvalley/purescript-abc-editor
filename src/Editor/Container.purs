@@ -49,10 +49,13 @@ type State =
   , vexScore :: VexScore
   , vexRendered :: Boolean
   , vexAligned :: Boolean
+  , initialAbc :: Maybe String
   }
 
 type Input =
-  { instruments :: Array Instrument }
+  { instruments :: Array Instrument
+  , initialAbc :: Maybe String
+  }
 
 
 data Action =
@@ -76,7 +79,7 @@ data Action =
 --
 -- Rendering takes place between the two initialisations.
 data Query a =
-    InitDummy a
+    InitQuery a
   | InitVex a
 
 abcFileInputCtx :: FIC.Context
@@ -137,6 +140,7 @@ component =
     , vexScore: Left ""
     , vexRendered: false
     , vexAligned: false
+    , initialAbc: input.initialAbc
     }
 
   render :: State -> H.ComponentHTML Action ChildSlots m
@@ -202,8 +206,9 @@ component =
   handleAction ∷ Action → H.HalogenM State Action ChildSlots o m Unit
   handleAction = case _ of
     Init -> do
+      state <- H.get
       -- defer to the query so we can chain them
-      _ <- handleQuery (InitDummy unit)
+      _ <- handleQuery (InitQuery unit)
       pure unit
     HandleABCFile (FIC.FileLoaded filespec) -> do
       _ <- H.modify (\st -> st { fileName = Just filespec.name } )
@@ -287,15 +292,18 @@ component =
 
   handleQuery :: ∀ o a . Query a -> H.HalogenM State Action ChildSlots o m (Maybe a)
   handleQuery = case _ of
-    InitDummy next -> do
+    InitQuery next -> do
       -- a completely artificial state change, forcing our first render
       _ <- H.modify (\st -> st { vexRenderer = Nothing } )
       handleQuery (InitVex next)
     InitVex next -> do
+      state <- H.get
       -- we split initialisation into two because Vex requires a rendering step
       -- before it can be initialised
       renderer <- H.liftEffect $ Score.initialiseCanvas vexConfig
       _ <- H.modify (\st -> st { vexRenderer = Just renderer } )
+      -- now we can handle any input ABC text from the initialization
+      _ <- onNewTuneText (state.initialAbc)
       pure (Just next)
 
 -- | synchronize child components whenever we might have a change in tune text

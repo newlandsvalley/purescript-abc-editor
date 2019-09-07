@@ -2,6 +2,7 @@ module Example.Main where
 
 import Prelude
 import Effect (Effect)
+import Data.Maybe (Maybe(..))
 import Data.Foldable (traverse_)
 import Halogen.Aff as HA
 import Halogen.VDom.Driver (runUI)
@@ -15,4 +16,6 @@ main :: Effect Unit
 main = HA.runHalogenAff do
   HA.awaitLoad
   instruments <- loadRemoteSoundFonts [AcousticGrandPiano]
-  traverse_ (runUI Container.component { instruments }) =<< HA.selectElement (QuerySelector "#embed-ps-div")
+  let
+    initialAbc = Nothing
+  traverse_ (runUI Container.component { instruments, initialAbc }) =<< HA.selectElement (QuerySelector "#embed-ps-div")
