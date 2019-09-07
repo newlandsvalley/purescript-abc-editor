@@ -39,7 +39,7 @@ import VexFlow.Score (Renderer, clearCanvas, createScore, renderScore, initialis
 import VexFlow.Types (Config, VexScore)
 import Editor.Window (print)
 
-type Slot = H.Slot (Const Void) Void
+type Slot = H.Slot Query Void
 
 type State =
   { instruments :: Array Instrument
