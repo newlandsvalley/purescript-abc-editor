@@ -145,10 +145,7 @@ component =
   render :: State -> H.ComponentHTML Action ChildSlots m
   render state = HH.div
     [ HP.id_ "abcEditor" ]
-    [ HH.h1
-        [HP.class_ (H.ClassName "center") ]
-        [HH.text "ABC Editor"]
-    , HH.div
+    [ HH.div
       -- left pane
       [ HP.class_ (H.ClassName "leftPane") ]
       [
