@@ -21,7 +21,6 @@ import Data.Maybe (Maybe(..), fromJust, fromMaybe, isJust)
 import Data.MediaType (MediaType(..))
 import Data.Symbol (SProxy(..))
 import Effect.Aff.Class (class MonadAff)
-import Data.Const (Const)
 import Halogen as H
 import Editor.EditorComponent as ED
 import Halogen.FileInputComponent as FIC
@@ -144,7 +143,8 @@ component =
     }
 
   render :: State -> H.ComponentHTML Action ChildSlots m
-  render state = HH.div_
+  render state = HH.div
+    [ HP.id_ "abcEditor" ]
     [ HH.h1
         [HP.class_ (H.ClassName "center") ]
         [HH.text "ABC Editor"]
@@ -290,7 +290,7 @@ component =
       _ <-  H.liftEffect print
       pure unit
 
-  handleQuery :: ∀ o a . Query a -> H.HalogenM State Action ChildSlots o m (Maybe a)
+  handleQuery :: ∀ a. Query a -> H.HalogenM State Action ChildSlots o m (Maybe a)
   handleQuery = case _ of
     InitQuery next -> do
       -- a completely artificial state change, forcing our first render
