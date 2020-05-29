@@ -2,7 +2,7 @@
   "private": true,
   "scripts": {
     "build": "pulp build",
-    "example": "pulp build --main Example.Main --include example/src --to example/dist/abc-editor.js",
+    "example": "pulp build --no-check-main --main Example.Main --include example/src --to example/dist/abc-editor.js",
     "watch": "pulp -w build --to dist/abc-editor.js"
   },
   "devDependencies": {

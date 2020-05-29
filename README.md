@@ -5,7 +5,7 @@ This is an editor for musical scores written in the ABC notation. It allows you 
 
 Try it [here](http://www.tradtunedb.org.uk/abceditor).
 
-Built with Purescript 13.3 and Halogen 5.0.0.
+Built with Purescript 0.13.8 and Halogen 5.0.0.
 
 Building
 --------
