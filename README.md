@@ -5,7 +5,7 @@ This is an editor for musical scores written in the ABC notation. It allows you 
 
 Try it [here](http://www.tradtunedb.org.uk/abceditor).
 
-Built with Purescript 0.13.8 and Halogen 5.0.0.
+Built with Purescript 0.13.8 and Halogen 5.0.0 (candidate release).  The melody is generated via MIDI using toMidi which is then translated to a playable melody.
 
 Building
 --------
@@ -23,4 +23,4 @@ from the current directory:
     $ bower install
     $ npm run example   
 
-Then navigate to example/dist/index.html.
+Then navigate to example/midi-melody/index.html.
