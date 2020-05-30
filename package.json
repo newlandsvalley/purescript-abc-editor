@@ -2,7 +2,7 @@
   "private": true,
   "scripts": {
     "build": "pulp build",
-    "example": "pulp build --no-check-main --main Example.Main --include example/src --to example/midi-melody/abc-editor-midi.js"
+    "example": "pulp build --no-check-main --main Example.Main --include example/src --to example/dist/abc-editor.js"
   },
   "devDependencies": {
     "pulp": "^14.0.0",

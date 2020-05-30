@@ -3,13 +3,12 @@ module Editor.Container where
 import Prelude
 
 import Audio.SoundFont (Instrument)
-import Audio.SoundFont.Melody.Class (MidiRecording(..))
 import DOM.HTML.Indexed.InputAcceptType (mediaType)
 import Data.Abc (AbcTune)
 import Data.Abc.Accidentals (fromKeySig)
 import Data.Abc.Canonical (fromTune)
 import Data.Abc.Metadata (getKeySig, getTitle)
-import Data.Abc.Midi (toMidi)
+import Data.Abc.PlayableAbc (PlayableAbc(..))
 import Data.Abc.Octave as Octave
 import Data.Abc.Parser (PositionedParseError, parseKeySignature)
 import Data.Abc.Tempo (defaultTempo, getBpm, setBpm)
@@ -107,7 +106,7 @@ type ChildSlots =
   , abcfile :: FIC.Slot Unit
   , clear :: Button.Slot Unit
   , savefile :: Button.Slot Unit
-  , player :: (PC.Slot MidiRecording) Unit
+  , player :: (PC.Slot PlayableAbc) Unit
   )
 
 _editor = SProxy :: SProxy "editor"
@@ -351,9 +350,9 @@ getFileName state =
           "untitled.abc"
 
 -- | convert a tune to a format recognized by the player
-toPlayable :: AbcTune -> MidiRecording
+toPlayable :: AbcTune -> PlayableAbc
 toPlayable abcTune =
-   MidiRecording $ toMidi abcTune
+   PlayableAbc { abcTune: abcTune, bpm : 120, phraseSize : 0.7, generateIntro: false  }
 
 -- rendering functions
 renderOctaveButton :: ∀ m
