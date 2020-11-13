@@ -28,7 +28,6 @@ import Halogen.HTML.Core (ClassName(..), HTML)
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Halogen.PlayerComponent as PC
-import Halogen.SimpleButtonComponent as Button
 import JS.FileIO (Filespec, saveTextFile)
 import Partial.Unsafe (unsafePartial)
 import Editor.Transposition (MenuOption(..), keyMenuOptions, cMajor, showKeySig)
@@ -59,8 +58,8 @@ type Input =
 data Action =
     Init
   | HandleABCFile FIC.Message
-  | HandleClearButton Button.Message
-  | HandleSaveButton Button.Message
+  | HandleClear
+  | HandleSave
   | HandleNewTuneText ED.Message
   | HandleMoveOctave Boolean
   | HandleTempoInput Int
@@ -68,6 +67,13 @@ data Action =
   | HandleTuneIsPlaying PC.Message
   | HandleAlign
   | HandlePrint
+
+-- | a simple button has no parameters and is greyed if there's no valid tune
+data SimpleButtonType =
+    Clear
+  | Save
+  | Align
+  | Print
 
 -- the only reason that we need Query at all is that we need to chain
 -- InitDummy followed by InitVex and this is only possible with Queries.
@@ -104,15 +110,11 @@ vexConfig =
 type ChildSlots =
   ( editor :: ED.Slot Unit
   , abcfile :: FIC.Slot Unit
-  , clear :: Button.Slot Unit
-  , savefile :: Button.Slot Unit
   , player :: (PC.Slot PlayableAbc) Unit
   )
 
 _editor = SProxy :: SProxy "editor"
 _abcfile = SProxy :: SProxy "abcfile"
-_clear = SProxy :: SProxy "clear"
-_savefile = SProxy :: SProxy "savefile"
 _player = SProxy :: SProxy "player"
 
 component :: ∀ o m. MonadAff m => H.Component HH.HTML Query Input o m
@@ -162,9 +164,10 @@ component =
           [ HH.label
              [ HP.class_ (H.ClassName "labelAlignment") ]
              [ HH.text "save or clear:" ]
-          , HH.slot _savefile unit (Button.component "save") unit (Just <<< HandleSaveButton)
+          -- save
+          , renderSimpleButton Save state
           -- clear
-          , HH.slot _clear unit (Button.component "clear") unit (Just <<< HandleClearButton)
+          , renderSimpleButton Clear state
           ]
       , HH.div
          -- shift octave
@@ -183,8 +186,10 @@ component =
         [ HH.label
            [ HP.class_ (H.ClassName "labelAlignment") ]
            [ HH.text "score:" ]
-        , renderAlignButton state
-        , renderPrintButton state
+        -- align
+        , renderSimpleButton Align state
+        -- print
+        , renderSimpleButton Print state
         ]
       , renderTempoSlider state
       , renderTranspositionMenu state
@@ -211,14 +216,14 @@ component =
       _ <- H.query _editor unit $ H.tell (ED.UpdateContent filespec.contents)
       _ <- H.query _player unit $ H.tell PC.StopMelody
       pure unit
-    HandleClearButton (Button.Toggled _) -> do
+    HandleClear -> do
       _ <- H.modify (\st -> st { fileName = Nothing
                                , vexScore = Left ""
                                , vexAligned = false
                                } )
       _ <- H.query _editor unit $ H.tell (ED.UpdateContent "")
       pure unit
-    HandleSaveButton (Button.Toggled _) -> do
+    HandleSave -> do
       maybeText <- H.query _editor unit $ H.request ED.GetText
       state <- H.get
       let
@@ -355,6 +360,35 @@ toPlayable abcTune =
    PlayableAbc { abcTune: abcTune, bpm : 120, phraseSize : 0.7, generateIntro: false  }
 
 -- rendering functions
+renderSimpleButton :: ∀ m
+  . MonadAff m
+  => SimpleButtonType
+  -> State
+  -> H.ComponentHTML Action ChildSlots m
+renderSimpleButton buttonType state =
+  let
+    label = case buttonType of
+      Clear -> "clear"
+      Save -> "save"
+      Align -> "align"
+      Print -> "print"
+    action = case buttonType of
+      Clear -> HandleClear
+      Save ->  HandleSave
+      Align -> HandleAlign
+      Print -> HandlePrint
+    enabled =
+      either (\_ -> false) (\_ -> true) state.tuneResult
+    className =
+          either (\_ -> "unhoverable") (\_ -> "hoverable") state.tuneResult
+  in
+    HH.button
+      [ HE.onClick \_ -> Just action
+      , HP.class_ $ ClassName className
+      , HP.enabled enabled
+      ]
+      [ HH.text label ]
+
 renderOctaveButton :: ∀ m
   . MonadAff m
   => Boolean
@@ -393,42 +427,6 @@ renderPlayer state =
     Left err ->
       HH.div_
         [  ]
-
-renderAlignButton :: ∀ m
-  . MonadAff m
-  => State
-  -> H.ComponentHTML Action ChildSlots m
-renderAlignButton state =
-  let
-    enabled =
-      either (\_ -> false) (\_ -> not state.vexAligned) state.tuneResult
-    className =
-      if enabled then "hoverable" else "unhoverable"
-  in
-    HH.button
-      [ HE.onClick \_ -> Just HandleAlign
-      , HP.class_ $ ClassName className
-      , HP.enabled enabled
-      ]
-      [ HH.text "align" ]
-
-renderPrintButton :: ∀ m
-  . MonadAff m
-  => State
-  -> H.ComponentHTML Action ChildSlots m
-renderPrintButton state =
-  let
-    enabled =
-      either (\_ -> false) (\_ -> true) state.tuneResult
-    className =
-      if enabled then "hoverable" else "unhoverable"
-  in
-    HH.button
-      [ HE.onClick \_ -> Just HandlePrint
-      , HP.class_ $ ClassName className
-      , HP.enabled enabled
-      ]
-      [ HH.text "print" ]
 
 renderScore :: ∀ m
   . MonadAff m
