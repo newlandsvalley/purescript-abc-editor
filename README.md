@@ -5,14 +5,13 @@ This is an editor for musical scores written in the ABC notation. It allows you 
 
 Try it [here](http://www.tradtunedb.org.uk/#/editor).
 
-Built with Purescript 0.13.8 and Halogen 5.0.0 (candidate release).  The melody is generated via MIDI using purescript-abc-melody.
+Built with Purescript 0.13.8 and Halogen 5.  The melody is generated via MIDI using purescript-abc-melody.
 
 Building
 --------
 
 from the current directory:
 
-    $ bower install
     $ npm run build
 
 Building the example
@@ -20,7 +19,6 @@ Building the example
 
 from the current directory:
 
-    $ bower install
     $ npm run example   
 
 Then navigate to example/dist/index.html.
