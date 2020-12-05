@@ -1,8 +1,10 @@
 {
   "private": true,
   "scripts": {
-    "build": "pulp build",
-    "example": "pulp build --main Example.Main --include example/src --to example/dist/abc-editor.js"
+    "build": "spago build",
+    "pulp-build": "pulp build",
+    "example": "spago -x ./example.dhall bundle-app --main Example.Main --to example/dist/abc-editor.js",
+    "pulp-example": "pulp build --main Example.Main --include example/src --to example/dist/abc-editor.js"
   },
   "devDependencies": {
     "pulp": "^15.0.0",

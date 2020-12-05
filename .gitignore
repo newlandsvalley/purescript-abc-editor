@@ -4,7 +4,9 @@
 /deprecated/
 /dist-vextab/
 /output/
+/.spago/
 /example/dist/abc-editor.js
 /example/midi-melody/
 /.psc*
 /.psa*
+/.purs-repl
