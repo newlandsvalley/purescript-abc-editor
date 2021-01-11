@@ -117,7 +117,7 @@ in  upstream
   with abc-scores =
     { dependencies = [ "abc-parser", "console", "effect", "prelude" ]
     , repo = "https://github.com/newlandsvalley/purescript-abc-scores.git"
-    , version = "v0.4.1"
+    , version = "v0.4.2"
     }
   with halogen-components =
     { dependencies =
