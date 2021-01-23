@@ -7,6 +7,8 @@
 /.spago/
 /example/dist/abc-editor.js
 /example/midi-melody/
+/example/dist-vexflow3/
+/reference/
 /.psc*
 /.psa*
 /.purs-repl
