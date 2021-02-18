@@ -110,16 +110,16 @@ let upstream =
 
 in  upstream
   with abc-parser.repo = "https://github.com/newlandsvalley/purescript-abc-parser.git"
-  with abc-parser.version = "v1.9.2"
+  with abc-parser.version = "v1.9.3"
   with abc-melody =
     { dependencies = [ "abc-parser", "effect", "prelude", "soundfonts" ]
     , repo = "https://github.com/newlandsvalley/purescript-abc-melody.git"
-    , version = "v0.2.2"
+    , version = "v0.2.3"
     }
   with abc-scores =
     { dependencies = [ "abc-parser", "console", "effect", "prelude" ]
     , repo = "https://github.com/newlandsvalley/purescript-abc-scores.git"
-    , version = "v0.5.2"
+    , version = "v0.5.3"
     }
   with halogen-components =
     { dependencies =
