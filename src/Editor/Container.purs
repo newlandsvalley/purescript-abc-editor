@@ -10,7 +10,8 @@ import Data.Abc.Canonical (fromTune)
 import Data.Abc.Metadata (getKeySig, getTitle)
 import Data.Abc.PlayableAbc (PlayableAbc(..))
 import Data.Abc.Octave as Octave
-import Data.Abc.Parser (PositionedParseError, parseKeySignature)
+import Text.Parsing.StringParser (ParseError)
+import Data.Abc.Parser (parseKeySignature)
 import Data.Abc.Tempo (defaultTempo, getBpm, setBpm)
 import Data.Abc.Transposition (transposeTo)
 import Data.Either (Either(..), either, hush, isLeft)
@@ -18,7 +19,6 @@ import Data.Int (fromString)
 import Data.List (List(..), null)
 import Data.Maybe (Maybe(..), fromJust, fromMaybe, isJust)
 import Data.MediaType (MediaType(..))
-import Data.Symbol (SProxy(..))
 import Effect.Aff.Class (class MonadAff)
 import Halogen as H
 import Editor.EditorComponent as ED
@@ -35,12 +35,13 @@ import VexFlow.Abc.Alignment (rightJustify)
 import VexFlow.Score (Renderer, clearCanvas, createScore, renderScore, initialiseCanvas) as Score
 import VexFlow.Types (Config, VexScore)
 import Editor.Window (print)
+import Type.Proxy (Proxy(..))
 
 type Slot = H.Slot Query Void
 
 type State =
   { instruments :: Array Instrument
-  , tuneResult :: Either PositionedParseError AbcTune
+  , tuneResult :: Either ParseError AbcTune
   , fileName :: Maybe String
   , vexRenderer :: Maybe Score.Renderer
   , vexScore :: VexScore
@@ -113,11 +114,11 @@ type ChildSlots =
   , player :: (PC.Slot PlayableAbc) Unit
   )
 
-_editor = SProxy :: SProxy "editor"
-_abcfile = SProxy :: SProxy "abcfile"
-_player = SProxy :: SProxy "player"
+_editor = Proxy :: Proxy "editor"
+_abcfile = Proxy :: Proxy "abcfile"
+_player = Proxy :: Proxy "player"
 
-component :: ∀ o m. MonadAff m => H.Component HH.HTML Query Input o m
+component :: ∀ o m. MonadAff m => H.Component Query Input o m
 component =
   H.mkComponent
     { initialState
@@ -145,7 +146,7 @@ component =
 
   render :: State -> H.ComponentHTML Action ChildSlots m
   render state = HH.div
-    [ HP.id_ "abcEditor" ]
+    [ HP.id "abcEditor" ]
     [ HH.div
       -- left pane
       [ HP.class_ (H.ClassName "leftPane") ]
@@ -156,7 +157,7 @@ component =
          [ HH.label
             [ HP.class_ (H.ClassName "labelAlignment") ]
             [ HH.text "load ABC file:" ]
-         , HH.slot _abcfile unit (FIC.component abcFileInputCtx) unit (Just <<< HandleABCFile)
+         , HH.slot _abcfile unit (FIC.component abcFileInputCtx) unit HandleABCFile
          ]
       , HH.div
           -- save
@@ -199,7 +200,7 @@ component =
     , HH.div
         [ HP.class_ (H.ClassName "rightPane") ]
         [
-          HH.slot _editor unit ED.component unit (Just <<< HandleNewTuneText)
+          HH.slot _editor unit ED.component unit HandleNewTuneText
         ]
     , renderScore state
     ]
@@ -213,18 +214,18 @@ component =
       pure unit
     HandleABCFile (FIC.FileLoaded filespec) -> do
       _ <- H.modify (\st -> st { fileName = Just filespec.name } )
-      _ <- H.query _editor unit $ H.tell (ED.UpdateContent filespec.contents)
-      _ <- H.query _player unit $ H.tell PC.StopMelody
+      _ <- H.tell _editor unit (ED.UpdateContent filespec.contents)
+      _ <- H.tell _player unit PC.StopMelody
       pure unit
     HandleClear -> do
       _ <- H.modify (\st -> st { fileName = Nothing
                                , vexScore = Left ""
                                , vexAligned = false
                                } )
-      _ <- H.query _editor unit $ H.tell (ED.UpdateContent "")
+      _ <- H.tell _editor unit (ED.UpdateContent "")
       pure unit
     HandleSave -> do
-      maybeText <- H.query _editor unit $ H.request ED.GetText
+      maybeText <- H.request _editor unit ED.GetText
       state <- H.get
       let
         fileName = getFileName state
@@ -319,10 +320,8 @@ onNewTuneText maybeText = do
    then do
      let
        tuneText = unsafePartial $ fromJust maybeText
-     -- _ <- H.query' editorSlotNo unit $ H.action (ED.UpdateContent tuneText)
-     -- _ <- H.query' playerSlotNo unit $ H.action PC.StopMelody
-     _ <- H.query _editor unit $ H.tell (ED.UpdateContent tuneText)
-     _ <- H.query _player unit $ H.tell PC.StopMelody
+     _ <- H.tell _editor unit (ED.UpdateContent tuneText)
+     _ <- H.tell _player unit PC.StopMelody
      pure unit
    else
      pure unit
@@ -331,12 +330,12 @@ onNewTuneText maybeText = do
 -- (if it had parsed OK)
 refreshPlayerState :: ∀ o m
     . MonadAff m
-    => Either PositionedParseError AbcTune
+    => Either ParseError AbcTune
     -> H.HalogenM State Action ChildSlots o m Unit
 refreshPlayerState tuneResult = do
   _ <- either
-     (\_ -> H.query _player unit $ H.tell PC.StopMelody)
-     (\abcTune -> H.query _player unit $ H.tell (PC.HandleNewPlayable (toPlayable abcTune)))
+     (\_ -> H.tell _player unit PC.StopMelody)
+     (\abcTune -> H.tell _player unit (PC.HandleNewPlayable (toPlayable abcTune)))
      tuneResult
   pure unit
 
@@ -383,7 +382,7 @@ renderSimpleButton buttonType state =
           either (\_ -> "unhoverable") (\_ -> "hoverable") state.tuneResult
   in
     HH.button
-      [ HE.onClick \_ -> Just action
+      [ HE.onClick \_ -> action
       , HP.class_ $ ClassName className
       , HP.enabled enabled
       ]
@@ -406,7 +405,7 @@ renderOctaveButton isUp state =
         else "down"
   in
     HH.button
-      [ HE.onClick \_ -> Just (HandleMoveOctave isUp)
+      [ HE.onClick \_ -> HandleMoveOctave isUp
       , HP.class_ $ ClassName className
       , HP.enabled enabled
       ]
@@ -421,9 +420,9 @@ renderPlayer state =
     Right abcTune ->
       HH.div
         [ HP.class_ (H.ClassName "leftPanelComponent")
-        , HP.id_  "player-div"
+        , HP.id  "player-div"
         ]
-        [ HH.slot _player unit (PC.component (toPlayable abcTune) state.instruments) unit (Just <<< HandleTuneIsPlaying) ]
+        [ HH.slot _player unit (PC.component (toPlayable abcTune) state.instruments) unit HandleTuneIsPlaying ]
     Left err ->
       HH.div_
         [  ]
@@ -434,11 +433,11 @@ renderScore :: ∀ m
   -> H.ComponentHTML Action ChildSlots m
 renderScore state =
   HH.div
-    [ HP.id_ "score"]
+    [ HP.id "score"]
     [ renderTuneTitle state
       , HH.div
          [ HP.class_ (H.ClassName "canvasDiv")
-         , HP.id_ "vexflow"
+         , HP.id "vexflow"
          ] []
     ]
 
@@ -450,7 +449,7 @@ renderTuneTitle state =
   case (hush state.tuneResult >>= getTitle) of
      Just title ->
          HH.h2
-            [HP.id_ "tune-title" ]
+            [HP.id "tune-title" ]
             [HH.text title]
      _ ->
         HH.text ""
@@ -480,9 +479,9 @@ renderTempoSlider state =
          [ HH.text "change tempo:" ]
 
       , HH.input
-          [ HE.onValueInput  (Just <<< HandleTempoInput <<< toTempo)
+          [ HE.onValueInput  (HandleTempoInput <<< toTempo)
           , HP.type_ HP.InputRange
-          , HP.id_ "tempo-slider"
+          , HP.id "tempo-slider"
           , HP.min 10.0
           , HP.max 300.0
           , HP.value (show startBpm)
@@ -524,10 +523,10 @@ renderTranspositionMenu state =
            [ HH.text "transpose to:" ]
         , HH.select
             [ HP.class_ $ ClassName "selection"
-            , HP.id_  "transposition-menu"
+            , HP.id  "transposition-menu"
             , HP.value (showKeySig mks.keySignature)
             , HP.enabled enabled
-            , HE.onValueChange (Just <<< HandleTranspositionKey)
+            , HE.onValueChange HandleTranspositionKey
             ]
             (map f $ keyMenuOptions mks.keySignature)
         ]

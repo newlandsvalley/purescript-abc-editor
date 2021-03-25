@@ -104,22 +104,38 @@ in  upstream
       }
 -------------------------------
 -}
-
 let upstream =
-      https://github.com/purescript/package-sets/releases/download/psc-0.13.8-20201217/packages.dhall sha256:f46d45e29977f3b57717b56d20a5ceac12532224516eea3012a4688f22ac1539
+      https://github.com/purescript/package-sets/releases/download/psc-0.14.0-20210324/packages.dhall sha256:b4564d575da6aed1c042ca7936da97c8b7a29473b63f4515f09bb95fae8dddab
 
 in  upstream
-  with abc-parser.repo = "https://github.com/newlandsvalley/purescript-abc-parser.git"
-  with abc-parser.version = "v1.9.3"
+  with abc-parser =
+    { dependencies = 
+      [ "bifunctors"
+      , "effect"
+      , "either"
+      , "foldable-traversable"
+      , "maybe"
+      , "midi"
+      , "ordered-collections"
+      , "rationals"
+      , "strings"
+      , "stringutils"
+      , "string-parsers"
+      , "transformers"
+      , "tuples"
+      ]
+    , repo = "https://github.com/newlandsvalley/purescript-abc-parser.git"
+    , version = "ps014"
+    }
   with abc-melody =
     { dependencies = [ "abc-parser", "effect", "prelude", "soundfonts" ]
     , repo = "https://github.com/newlandsvalley/purescript-abc-melody.git"
-    , version = "v0.2.3"
+    , version = "ps014"
     }
   with abc-scores =
     { dependencies = [ "abc-parser", "console", "effect", "prelude" ]
     , repo = "https://github.com/newlandsvalley/purescript-abc-scores.git"
-    , version = "v0.5.3"
+    , version = "ps014"
     }
   with halogen-components =
     { dependencies =
@@ -133,5 +149,15 @@ in  upstream
       ]
     , repo =
         "https://github.com/newlandsvalley/purescript-halogen-components.git"
-    , version = "master"
+    , version = "ps014"
     }
+  with halogen-css =
+      { dependencies =
+          [ "css"
+          , "halogen"
+          ]
+      , repo =
+          "https://github.com/newlandsvalley/purescript-halogen-css.git"
+      , version =
+          "master"
+      }
