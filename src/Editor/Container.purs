@@ -32,7 +32,7 @@ import JS.FileIO (Filespec, saveTextFile)
 import Partial.Unsafe (unsafePartial)
 import Editor.Transposition (MenuOption(..), keyMenuOptions, cMajor, showKeySig)
 import VexFlow.Abc.Alignment (rightJustify)
-import VexFlow.Score (Renderer, clearCanvas, createScore, renderScore, initialiseCanvas) as Score
+import VexFlow.Score (Renderer, clearCanvas, createScore, renderUntitledScore, initialiseCanvas) as Score
 import VexFlow.Types (Config, VexScore)
 import Editor.Window (print)
 import Type.Proxy (Proxy(..))
@@ -106,6 +106,7 @@ vexConfig =
   , height : 700
   , scale : 0.8
   , isSVG : true
+  , titled : false
   }
 
 type ChildSlots =
@@ -208,7 +209,7 @@ component =
   handleAction ∷ Action → H.HalogenM State Action ChildSlots o m Unit
   handleAction = case _ of
     Init -> do
-      state <- H.get
+      -- state <- H.get
       -- defer to the query so we can chain them
       _ <- handleQuery (InitQuery unit)
       pure unit
@@ -261,7 +262,7 @@ component =
         Just renderer -> do
           _ <- H.liftEffect $ Score.clearCanvas $ renderer
           -- render the score with no RHS alignment
-          rendered <- H.liftEffect $ Score.renderScore vexConfig renderer vexScore
+          rendered <- H.liftEffect $ Score.renderUntitledScore renderer vexScore
           _ <- H.modify (\st -> st { tuneResult = r
                                    , vexRendered = rendered
                                    , vexScore = vexScore
@@ -270,7 +271,7 @@ component =
           pure unit
         _ ->
           pure unit
-    HandleTuneIsPlaying (PC.IsPlaying p) -> do
+    HandleTuneIsPlaying (PC.IsPlaying _) -> do
       -- we ignore this message, but if we wanted to we could
       -- disable any button that can alter the editor contents whilst the player
       -- is playing and re-enable when it stops playing
@@ -283,8 +284,8 @@ component =
           -- right justify the score
           let
             justifiedScore = rightJustify vexConfig.width vexConfig.scale state.vexScore
-          rendered <- H.liftEffect $ Score.renderScore vexConfig renderer justifiedScore
-          _ <- H.modify (\st -> st { vexAligned = true } )
+          rendered <- H.liftEffect $ Score.renderUntitledScore renderer justifiedScore
+          _ <- H.modify (\st -> st { vexAligned = rendered } )
           pure unit
         _ ->
           pure unit
@@ -423,7 +424,7 @@ renderPlayer state =
         , HP.id  "player-div"
         ]
         [ HH.slot _player unit (PC.component (toPlayable abcTune) state.instruments) unit HandleTuneIsPlaying ]
-    Left err ->
+    Left _ ->
       HH.div_
         [  ]
 
@@ -510,7 +511,7 @@ renderTranspositionMenu state =
             cMajor
       enabled =
         case state.tuneResult of
-          Right tune ->
+          Right _ ->  -- tune
             -- only offer transposition if we don't have strange Klezmer/Balkan type modes
             null mks.modifications
           _ ->
