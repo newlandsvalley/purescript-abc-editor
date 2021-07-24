@@ -31,8 +31,7 @@ import Halogen.PlayerComponent as PC
 import JS.FileIO (Filespec, saveTextFile)
 import Partial.Unsafe (unsafePartial)
 import Editor.Transposition (MenuOption(..), keyMenuOptions, cMajor, showKeySig)
-import VexFlow.Abc.Alignment (rightJustify)
-import VexFlow.Score (Renderer, clearCanvas, createScore, renderUntitledScore, initialiseCanvas) as Score
+import VexFlow.Score (Renderer, clearCanvas, renderFinalTune, renderTune, initialiseCanvas) as Score
 import VexFlow.Types (Config, VexScore)
 import Editor.Window (print)
 import Type.Proxy (Proxy(..))
@@ -257,15 +256,15 @@ component =
       state <- H.get
       let
         abcTune = either (\_ -> emptyTune) (identity) r
-        vexScore = Score.createScore vexConfig abcTune
+        -- vexScore = Score.createScore vexConfig abcTune
       case state.vexRenderer of
         Just renderer -> do
           _ <- H.liftEffect $ Score.clearCanvas $ renderer
           -- render the score with no RHS alignment
-          rendered <- H.liftEffect $ Score.renderUntitledScore renderer vexScore
+          -- rendered <- H.liftEffect $ Score.renderUntitledScore renderer vexScore
+          rendered <- H.liftEffect $ Score.renderTune vexConfig renderer abcTune
           _ <- H.modify (\st -> st { tuneResult = r
                                    , vexRendered = rendered
-                                   , vexScore = vexScore
                                    , vexAligned = false
                                    } )
           pure unit
@@ -280,11 +279,16 @@ component =
       state <- H.get
       case state.vexRenderer of
         Just renderer -> do
+          let
+            abcTune = either (\_ -> emptyTune) (identity) state.tuneResult
           _ <- H.liftEffect $ Score.clearCanvas renderer
           -- right justify the score
+          {-}
           let
             justifiedScore = rightJustify vexConfig.width vexConfig.scale state.vexScore
           rendered <- H.liftEffect $ Score.renderUntitledScore renderer justifiedScore
+          -}
+          rendered <- H.liftEffect $ Score.renderFinalTune vexConfig renderer abcTune
           _ <- H.modify (\st -> st { vexAligned = rendered } )
           pure unit
         _ ->
