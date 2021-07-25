@@ -31,7 +31,7 @@ import Halogen.PlayerComponent as PC
 import JS.FileIO (Filespec, saveTextFile)
 import Partial.Unsafe (unsafePartial)
 import Editor.Transposition (MenuOption(..), keyMenuOptions, cMajor, showKeySig)
-import VexFlow.Score (Renderer, clearCanvas, renderFinalTune, renderTune, initialiseCanvas) as Score
+import VexFlow.Score (Renderer, clearCanvas, renderRightAlignedTune, renderTune, initialiseCanvas) as Score
 import VexFlow.Types (Config)
 import Editor.Window (print)
 import Type.Proxy (Proxy(..))
@@ -277,8 +277,8 @@ component =
           let
             abcTune = either (\_ -> emptyTune) (identity) state.tuneResult
           _ <- H.liftEffect $ Score.clearCanvas renderer
-          -- right justify the score
-          rendered <- H.liftEffect $ Score.renderFinalTune vexConfig renderer abcTune
+          -- right align the score -- all the score right-hand sides align
+          rendered <- H.liftEffect $ Score.renderRightAlignedTune vexConfig renderer abcTune
           _ <- H.modify (\st -> st { vexAligned = rendered } )
           pure unit
         _ ->
