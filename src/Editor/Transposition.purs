@@ -3,8 +3,8 @@ module Editor.Transposition
 
 import Data.Abc (Accidental(..), ModifiedKeySignature, KeySignature, Mode(..), Pitch(..), PitchClass(..))
 import Data.Abc.Accidentals (fromKeySig)
+import Data.Abc.KeySignature (defaultKey)
 import Prelude (map, show, (<>), (==))
-import Data.List (List(..))
 
 -- | a menu option is a string representing the option and a boolean indicating
 -- | whether it is selected
@@ -14,7 +14,7 @@ data MenuOption =
 -- | The C major key signature
 cMajor :: ModifiedKeySignature
 cMajor =
-     { keySignature:  { pitchClass: C, accidental: Natural, mode: Major }, modifications: Nil }
+   defaultKey
 
 -- | how a key signature is displayed in the menu
 showKeySig :: KeySignature -> String
