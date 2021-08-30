@@ -31,8 +31,8 @@ type State =
 
 data Action = UpdateContentAction String
 
-data Query a =
-    UpdateContent String a
+data Query a
+  = UpdateContent String a
   | UpdateEnabled Boolean a
   | GetText (String -> a)
 
@@ -41,7 +41,7 @@ data Message = TuneResult (Either ParseError AbcTune)
 -- | there is no tune yet
 nullTune :: Either ParseError AbcTune
 nullTune =
-  Left { error : "", pos : 0 }
+  Left { error: "", pos: 0 }
 
 -- component :: forall m. H.Component HH.HTML Query Unit Message m
 component :: ∀ i m. H.Component Query i Message m
@@ -60,25 +60,25 @@ component =
 
   initialState :: i -> State
   initialState _ =
-    { text : ""
-    , parseError : Nothing
-    , isEnabled : true
+    { text: ""
+    , parseError: Nothing
+    , isEnabled: true
     }
 
   render :: State -> H.ComponentHTML Action () m
   render state =
     HH.div_
       [ HH.textarea
-         [ HP.rows 13
-         , HP.cols 60
-         , HP.autofocus true
-         , HP.value state.text
-         , HP.class_ $ ClassName "abcEdit"
-         , HP.enabled state.isEnabled
-         , HP.spellcheck false
-         -- , HP.wrap false
-         , HE.onValueInput UpdateContentAction
-         ]
+          [ HP.rows 13
+          , HP.cols 60
+          , HP.autofocus true
+          , HP.value state.text
+          , HP.class_ $ ClassName "abcEdit"
+          , HP.enabled state.isEnabled
+          , HP.spellcheck false
+          -- , HP.wrap false
+          , HE.onValueInput UpdateContentAction
+          ]
       , renderParseError state
       ]
 
@@ -100,11 +100,11 @@ handleQuery = case _ of
           -- we need to add a terminating bar line
           parse (s <> "|\r\n")
       parseError = either Just (const Nothing) tuneResult
-    _ <- H.modify (\state -> state {text = s, parseError = parseError})
+    _ <- H.modify (\state -> state { text = s, parseError = parseError })
     H.raise $ TuneResult tuneResult
     pure (Just next)
   UpdateEnabled isEnabled next -> do
-    _ <- H.modify (\state -> state {isEnabled = isEnabled})
+    _ <- H.modify (\state -> state { isEnabled = isEnabled })
     pure (Just next)
   GetText reply -> do
     state <- H.get
@@ -118,7 +118,7 @@ renderParseError state =
     txt = toCharArray state.text
   in
     case state.parseError of
-      Just { error, pos }  ->
+      Just { error, pos } ->
         if (S.null state.text) then
           HH.div_ []
         else
@@ -141,8 +141,8 @@ renderParseError state =
               [ HH.text $ error <> " - "
               , HH.text $ fromCharArray errorPrefix
               , HH.span
-                 [ errorHighlightStyle ]
-                 [ HH.text (fromCharArray errorChar) ]
+                  [ errorHighlightStyle ]
+                  [ HH.text (fromCharArray errorChar) ]
               , HH.text $ fromCharArray errorSuffix
               ]
       _ ->

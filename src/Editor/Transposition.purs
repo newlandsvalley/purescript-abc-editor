@@ -1,5 +1,9 @@
 module Editor.Transposition
-  (MenuOption(..), keyMenuOptions, cMajor, showKeySig) where
+  ( MenuOption(..)
+  , keyMenuOptions
+  , cMajor
+  , showKeySig
+  ) where
 
 import Data.Abc (Accidental(..), ModifiedKeySignature, KeySignature, Mode(..), Pitch(..), PitchClass(..))
 import Data.Abc.Accidentals (fromKeySig)
@@ -14,7 +18,7 @@ data MenuOption =
 -- | The C major key signature
 cMajor :: ModifiedKeySignature
 cMajor =
-   defaultKey
+  defaultKey
 
 -- | how a key signature is displayed in the menu
 showKeySig :: KeySignature -> String
@@ -78,7 +82,7 @@ sharpKeys =
 -- | build a pitch
 pitch :: PitchClass -> Accidental -> Pitch
 pitch pc a =
-  Pitch { pitchClass : pc, accidental : a}
+  Pitch { pitchClass: pc, accidental: a }
 
 -- | how a key is displayed in the menu
 showKey :: Mode -> Pitch -> String
