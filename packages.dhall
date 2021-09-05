@@ -131,12 +131,12 @@ in  upstream
   with abc-melody =
     { dependencies = [ "abc-parser", "effect", "prelude", "rhythm-guitar", "soundfonts" ]
     , repo = "https://github.com/newlandsvalley/purescript-abc-melody.git"
-    , version = "chords"
+    , version = "ps014"
     }
   with abc-scores =
     { dependencies = [ "abc-parser", "console", "effect", "prelude" ]
     , repo = "https://github.com/newlandsvalley/purescript-abc-scores.git"
-    , version = "chords"
+    , version = "ps014"
     }
   with rhythm-guitar =
     { dependencies =
