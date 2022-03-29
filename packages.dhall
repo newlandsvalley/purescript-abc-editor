@@ -105,7 +105,8 @@ in  upstream
 -------------------------------
 -}
 let upstream =
-      https://github.com/purescript/package-sets/releases/download/psc-0.14.3-20210825/packages.dhall sha256:eee0765aa98e0da8fc414768870ad588e7cada060f9f7c23c37385c169f74d9f
+      https://github.com/purescript/package-sets/releases/download/psc-0.14.7-20220321/packages.dhall
+        sha256:dff91304260c1196273badf7d8141e66ab16bed147b95aa175dd8a84ec87d58f
 
 in  upstream
   with abc-parser =
@@ -129,7 +130,8 @@ in  upstream
     , version = "ps014"
     }
   with abc-melody =
-    { dependencies = [ "abc-parser", "effect", "prelude", "rhythm-guitar", "soundfonts" ]
+    { dependencies =
+      [ "abc-parser", "effect", "prelude", "rhythm-guitar", "soundfonts" ]
     , repo = "https://github.com/newlandsvalley/purescript-abc-melody.git"
     , version = "ps014"
     }
@@ -177,3 +179,35 @@ in  upstream
         "https://github.com/newlandsvalley/purescript-halogen-components.git"
     , version = "ps014"
     }
+  with soundfonts =
+    { dependencies =
+      [ "aff"
+      , "affjax"
+      , "argonaut-core"
+      , "arraybuffer-types"
+      , "arrays"
+      , "b64"
+      , "bifunctors"
+      , "console"
+      , "effect"
+      , "either"
+      , "exceptions"
+      , "foldable-traversable"
+      , "foreign-object"
+      , "http-methods"
+      , "integers"
+      , "lists"
+      , "maybe"
+      , "midi"
+      , "ordered-collections"
+      , "parallel"
+      , "partial"
+      , "prelude"
+      , "strings"
+      , "transformers"
+      , "tuples"
+      ]
+    , repo = "https://github.com/newlandsvalley/purescript-soundfonts.git"
+    , version = "v3.3.0"
+    }
+

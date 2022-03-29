@@ -32,7 +32,7 @@ import Halogen.PlayerComponent as PC
 import JS.FileIO (Filespec, saveTextFile)
 import Partial.Unsafe (unsafePartial)
 import RhythmGuitar.Types (MidiPitchChordMap)
-import Text.Parsing.StringParser (ParseError)
+import StringParser (ParseError)
 import Type.Proxy (Proxy(..))
 import VexFlow.Score (Renderer, clearCanvas, renderRightAlignedTune, renderTune, initialiseCanvas) as Score
 import VexFlow.Types (Config)

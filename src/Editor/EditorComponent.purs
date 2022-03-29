@@ -8,7 +8,7 @@ import Data.Either (Either(..), either)
 import Data.String (null) as S
 import Data.String.CodeUnits (fromCharArray, toCharArray)
 import Data.Array (length, slice) as A
-import Text.Parsing.StringParser (ParseError)
+import StringParser (ParseError)
 import Data.Abc.Parser (parse)
 import Data.Abc (AbcTune)
 import Data.Maybe (Maybe(..))
