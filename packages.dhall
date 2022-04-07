@@ -105,8 +105,8 @@ in  upstream
 -------------------------------
 -}
 let upstream =
-      https://github.com/purescript/package-sets/releases/download/psc-0.14.7-20220321/packages.dhall
-        sha256:dff91304260c1196273badf7d8141e66ab16bed147b95aa175dd8a84ec87d58f
+      https://github.com/purescript/package-sets/releases/download/psc-0.14.7-20220404/packages.dhall
+        sha256:75d0f0719f32456e6bdc3efd41cfc64785655d2b751e3d080bd849033ed053f2
 
 in  upstream
   with abc-parser =
@@ -179,35 +179,3 @@ in  upstream
         "https://github.com/newlandsvalley/purescript-halogen-components.git"
     , version = "ps014"
     }
-  with soundfonts =
-    { dependencies =
-      [ "aff"
-      , "affjax"
-      , "argonaut-core"
-      , "arraybuffer-types"
-      , "arrays"
-      , "b64"
-      , "bifunctors"
-      , "console"
-      , "effect"
-      , "either"
-      , "exceptions"
-      , "foldable-traversable"
-      , "foreign-object"
-      , "http-methods"
-      , "integers"
-      , "lists"
-      , "maybe"
-      , "midi"
-      , "ordered-collections"
-      , "parallel"
-      , "partial"
-      , "prelude"
-      , "strings"
-      , "transformers"
-      , "tuples"
-      ]
-    , repo = "https://github.com/newlandsvalley/purescript-soundfonts.git"
-    , version = "v3.3.0"
-    }
-

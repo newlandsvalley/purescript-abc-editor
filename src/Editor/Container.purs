@@ -8,6 +8,7 @@ import Data.Abc (AbcTune)
 import Data.Abc.Accidentals (fromKeySig)
 import Data.Abc.Canonical (fromTune)
 import Data.Abc.Melody (PlayableAbc(..), defaultPlayableAbcProperties)
+import Data.Abc.Melody.Types (MidiPitchChordMap)
 import Data.Abc.Metadata (getKeySig, getTitle)
 import Data.Abc.Octave as Octave
 import Data.Abc.Parser (parseKeySignature)
@@ -31,7 +32,6 @@ import Halogen.HTML.Properties as HP
 import Halogen.PlayerComponent as PC
 import JS.FileIO (Filespec, saveTextFile)
 import Partial.Unsafe (unsafePartial)
-import RhythmGuitar.Types (MidiPitchChordMap)
 import StringParser (ParseError)
 import Type.Proxy (Proxy(..))
 import VexFlow.Score (Renderer, clearCanvas, renderRightAlignedTune, renderTune, initialiseCanvas) as Score

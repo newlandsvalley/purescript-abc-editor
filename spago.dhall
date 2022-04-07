@@ -25,7 +25,6 @@ You can edit this file as you like.
   , "media-types"
   , "partial"
   , "prelude"
-  , "rhythm-guitar"
   , "soundfonts"
   , "string-parsers"
   , "strings"
