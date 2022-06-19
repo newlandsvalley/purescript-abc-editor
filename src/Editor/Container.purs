@@ -45,7 +45,6 @@ type State =
   , tuneResult :: Either ParseError AbcTune
   , fileName :: Maybe String
   , vexRenderer :: Maybe Score.Renderer
-  , vexRendered :: Boolean
   , vexAligned :: Boolean
   , initialAbc :: Maybe String
   }
@@ -141,7 +140,6 @@ component =
     , tuneResult: ED.nullTune
     , fileName: Nothing
     , vexRenderer: Nothing
-    , vexRendered: false
     , vexAligned: false
     , initialAbc: input.initialAbc
     }
@@ -264,11 +262,10 @@ component =
         Just renderer -> do
           _ <- H.liftEffect $ Score.clearCanvas $ renderer
           -- render the score with no RHS alignment
-          rendered <- H.liftEffect $ Score.renderTune vexConfig renderer abcTune
+          _ <- H.liftEffect $ Score.renderTune vexConfig renderer abcTune
           _ <- H.modify
             ( \st -> st
                 { tuneResult = r
-                , vexRendered = rendered
                 , vexAligned = false
                 }
             )
