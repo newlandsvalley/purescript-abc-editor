@@ -17,7 +17,7 @@ import Data.Abc.Transposition (transposeTo)
 import Data.Either (Either(..), either, hush, isLeft)
 import Data.Int (fromString)
 import Data.List (List(..), null)
-import Data.Maybe (Maybe(..), fromJust, fromMaybe, isJust)
+import Data.Maybe (Maybe(..), fromJust, fromMaybe, isJust, isNothing)
 import Data.MediaType (MediaType(..))
 import Editor.EditorComponent as ED
 import Editor.Transposition (MenuOption(..), keyMenuOptions, cMajor, showKeySig)
@@ -285,8 +285,8 @@ component =
             abcTune = either (\_ -> emptyTune) (identity) state.tuneResult
           _ <- H.liftEffect $ Score.clearCanvas renderer
           -- right align the score -- all the score right-hand sides align
-          rendered <- H.liftEffect $ Score.renderRightAlignedTune vexConfig renderer abcTune
-          _ <- H.modify (\st -> st { vexAligned = rendered })
+          mRenderError <- H.liftEffect $ Score.renderRightAlignedTune vexConfig renderer abcTune
+          _ <- H.modify (\st -> st { vexAligned = isNothing mRenderError })
           pure unit
         _ ->
           pure unit
