@@ -7,13 +7,14 @@ import DOM.HTML.Indexed.InputAcceptType (mediaType)
 import Data.Abc (AbcTune)
 import Data.Abc.Accidentals (fromKeySig)
 import Data.Abc.Canonical (fromTune)
+import Data.Abc.KeySignature (getKeySig)
 import Data.Abc.Melody (PlayableAbc(..), defaultPlayableAbcProperties)
 import Data.Abc.Melody.Types (MidiPitchChordMap)
-import Data.Abc.Metadata (getKeySig, getTitle)
 import Data.Abc.Octave as Octave
 import Data.Abc.Parser (parseKeySignature)
 import Data.Abc.Tempo (defaultTempo, getBpm, setBpm)
 import Data.Abc.Transposition (transposeTo)
+import Data.Abc.Utils (getTitle)
 import Data.Either (Either(..), either, hush, isLeft)
 import Data.Int (fromString)
 import Data.List (List(..), null)
@@ -35,6 +36,7 @@ import Partial.Unsafe (unsafePartial)
 import StringParser (ParseError)
 import Type.Proxy (Proxy(..))
 import VexFlow.Score (Renderer, clearCanvas, renderRightAlignedTune, renderTune, initialiseCanvas) as Score
+import VexFlow.Abc.TickableContext (defaultNoteSeparation)
 import VexFlow.Types (Config)
 
 type Slot = H.Slot Query Void
@@ -106,6 +108,7 @@ vexConfig =
   , scale: 0.8
   , isSVG: true
   , titled: false
+  , noteSeparation: defaultNoteSeparation
   , showChordSymbols: true
   }
 
