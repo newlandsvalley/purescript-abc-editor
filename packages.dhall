@@ -105,109 +105,80 @@ in  upstream
 -------------------------------
 -}
 let upstream =
-      https://github.com/purescript/package-sets/releases/download/psc-0.15.0-20220515/packages.dhall
-        sha256:6d7cde12a37db772a5fb78a1d8877481445abfd3351d57605e2ceb5e66892022
+      https://github.com/purescript/package-sets/releases/download/psc-0.15.4-20221012/packages.dhall
+        sha256:31c6db01ae45b911bf529c3ab731b02d114d14115938009b0c72a231589bfffd
 
 in  upstream
-  with abc-parser =
-    { dependencies =
-    [ "arrays"
-    , "bifunctors"
-    , "control"
-    , "either"
-    , "enums"
-    , "foldable-traversable"
-    , "identity"
-    , "integers"
-    , "lists"
-    , "maybe"
-    , "midi"
-    , "newtype"
-    , "ordered-collections"
-    , "partial"
-    , "prelude"
-    , "profunctor-lenses"
-    , "rationals"
-    , "string-parsers"
-    , "strings"
-    , "stringutils"
-    , "transformers"
-    , "tuples"
-    , "unfoldable"
-    ]
-    , repo = "https://github.com/newlandsvalley/purescript-abc-parser.git"
-    , version = "ps015"
-    }
   with abc-melody =
-    { dependencies =     
-    [ "abc-parser"
-    , "arrays"
-    , "bifunctors"
-    , "either"
-    , "foldable-traversable"
-    , "integers"
-    , "lists"
-    , "maybe"
-    , "newtype"
-    , "ordered-collections"
-    , "prelude"
-    , "rationals"
-    , "rhythm-guitar"
-    , "soundfonts"
-    , "transformers"
-    , "tuples"
-    ]
+    { dependencies =
+      [ "abc-parser"
+      , "arrays"
+      , "bifunctors"
+      , "either"
+      , "foldable-traversable"
+      , "integers"
+      , "lists"
+      , "maybe"
+      , "newtype"
+      , "ordered-collections"
+      , "prelude"
+      , "rationals"
+      , "rhythm-guitar"
+      , "soundfonts"
+      , "transformers"
+      , "tuples"
+      ]
     , repo = "https://github.com/newlandsvalley/purescript-abc-melody.git"
-    , version = "ps015"
+    , version = "v0.3.0"
     }
   with abc-scores =
-    { dependencies = 
-    [ "abc-parser"
-    , "arrays"
-    , "console"
-    , "effect"
-    , "either"
-    , "foldable-traversable"
-    , "integers"
-    , "lists"
-    , "maybe"
-    , "newtype"
-    , "ordered-collections"
-    , "prelude"
-    , "profunctor-lenses"
-    , "rationals"
-    , "strings"
-    , "stringutils"
-    , "transformers"
-    , "tuples"
-    , "unfoldable"
-    ]
+    { dependencies =
+      [ "abc-parser"
+      , "arrays"
+      , "console"
+      , "effect"
+      , "either"
+      , "foldable-traversable"
+      , "integers"
+      , "lists"
+      , "maybe"
+      , "newtype"
+      , "ordered-collections"
+      , "prelude"
+      , "profunctor-lenses"
+      , "rationals"
+      , "strings"
+      , "stringutils"
+      , "transformers"
+      , "tuples"
+      , "unfoldable"
+      ]
     , repo = "https://github.com/newlandsvalley/purescript-abc-scores.git"
-    , version = "ps015"
+    , version = "v0.6.0"
     }
   with rhythm-guitar =
     { dependencies =
-    [ "aff"
-    , "affjax"
-    , "affjax-web"
-    , "arrays"
-    , "console"
-    , "control"
-    , "effect"
-    , "either"
-    , "foreign"
-    , "http-methods"
-    , "maybe"
-    , "ordered-collections"
-    , "prelude"
-    , "soundfonts"
-    , "string-parsers"
-    , "strings"
-    , "tuples"
-    , "yoga-json"
-    ] 
+      [ "aff"
+      , "affjax"
+      , "affjax-web"
+      , "arrays"
+      , "console"
+      , "control"
+      , "effect"
+      , "either"
+      , "foreign"
+      , "http-methods"
+      , "maybe"
+      , "ordered-collections"
+      , "prelude"
+      , "soundfonts"
+      , "simple-json"
+      , "string-parsers"
+      , "strings"
+      , "tuples"
+      ]
     , repo = "https://github.com/newlandsvalley/RhythmGuitar.git"
-    , version = "main"
+    , version = "v0.2.0"
     }
   with halogen-components =
     { dependencies =
@@ -221,5 +192,5 @@ in  upstream
       ]
     , repo =
         "https://github.com/newlandsvalley/purescript-halogen-components.git"
-    , version = "ps015"
+    , version = "v0.6.0"
     }
