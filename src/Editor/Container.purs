@@ -37,7 +37,7 @@ import StringParser (ParseError)
 import Type.Proxy (Proxy(..))
 import VexFlow.Score (Renderer, clearCanvas, renderRightAlignedTune, renderTune, initialiseCanvas) as Score
 import VexFlow.Abc.TickableContext (defaultNoteSeparation)
-import VexFlow.Types (Config)
+import VexFlow.Types (Config, Titling(..))
 
 type Slot = H.Slot Query Void
 
@@ -107,7 +107,7 @@ vexConfig =
   , height: 700
   , scale: 0.8
   , isSVG: true
-  , titled: false
+  , titling: NoTitle
   , noteSeparation: defaultNoteSeparation
   , showChordSymbols: true
   }

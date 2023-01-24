@@ -1,7 +1,6 @@
 module Editor.EditorComponent where
 
--- the actual editoing window
-
+-- the actual editing window
 import Prelude
 
 import Data.Either (Either(..), either)

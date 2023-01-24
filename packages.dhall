@@ -154,7 +154,7 @@ in  upstream
       , "unfoldable"
       ]
     , repo = "https://github.com/newlandsvalley/purescript-abc-scores.git"
-    , version = "v0.6.0"
+    , version = "v0.6.3"
     }
   with rhythm-guitar =
     { dependencies =
