@@ -105,8 +105,8 @@ in  upstream
 -------------------------------
 -}
 let upstream =
-      https://github.com/purescript/package-sets/releases/download/psc-0.15.4-20221012/packages.dhall
-        sha256:31c6db01ae45b911bf529c3ab731b02d114d14115938009b0c72a231589bfffd
+      https://github.com/purescript/package-sets/releases/download/psc-0.15.10-20230808/packages.dhall
+        sha256:1f2f8be27ed474d333848bfae9db43790202e3b4da8d73584b1029260677d7e1
 
 in  upstream
   with abc-melody =
@@ -129,7 +129,7 @@ in  upstream
       , "tuples"
       ]
     , repo = "https://github.com/newlandsvalley/purescript-abc-melody.git"
-    , version = "v0.3.0"
+    , version = "v0.3.1"
     }
   with abc-scores =
     { dependencies =
@@ -154,7 +154,7 @@ in  upstream
       , "unfoldable"
       ]
     , repo = "https://github.com/newlandsvalley/purescript-abc-scores.git"
-    , version = "v0.6.3"
+    , version = "v0.6.4"
     }
   with rhythm-guitar =
     { dependencies =
@@ -178,7 +178,7 @@ in  upstream
       , "tuples"
       ]
     , repo = "https://github.com/newlandsvalley/RhythmGuitar.git"
-    , version = "v0.2.0"
+    , version = "v0.2.1"
     }
   with halogen-components =
     { dependencies =
