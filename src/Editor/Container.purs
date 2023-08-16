@@ -495,16 +495,16 @@ renderTempoSlider state =
     toTempo s =
       fromMaybe defaultTempo.bpm $ fromString s
   in
-    HH.div
+    HH.div      
       [ HP.class_ (H.ClassName "leftPanelComponent") ]
       [ HH.label
           [ HP.class_ (H.ClassName "labelAlignment") ]
           [ HH.text "change tempo:" ]
 
       , HH.input
-          [ HE.onValueInput (HandleTempoInput <<< toTempo)
+          [ HP.class_ (H.ClassName "slider")
+          , HE.onValueInput (HandleTempoInput <<< toTempo)
           , HP.type_ HP.InputRange
-          , HP.id "tempo-slider"
           , HP.min 10.0
           , HP.max 300.0
           , HP.value (show startBpm)

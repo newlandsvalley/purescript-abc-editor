@@ -52,8 +52,9 @@ label {
   display: block;
 }
 
-#tempo-slider {
+.slider {
   width: 160px;
+  margin-top: 8px;
 }
 
 #transposition-menu {
