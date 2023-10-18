@@ -24,6 +24,7 @@ import Editor.EditorComponent as ED
 import Editor.Transposition (MenuOption(..), keyMenuOptions, cMajor, showKeySig)
 import Editor.Window (print)
 import Effect.Aff.Class (class MonadAff)
+import Effect (Effect)
 import Halogen as H
 import Halogen.FileInputComponent as FIC
 import Halogen.HTML as HH
@@ -105,7 +106,7 @@ vexConfig =
   { parentElementId: "vexflow"
   , width: 1300
   , height: 700
-  , scale: 0.8
+  , scale: 0.75
   , isSVG: true
   , titling: NoTitle
   , noteSeparation: defaultNoteSeparation
@@ -574,3 +575,4 @@ transposeTune s state =
       changeTune (transposeTo $ fromKeySig mks.keySignature) state
     Left _ ->
       Nothing
+

@@ -5,7 +5,9 @@ This is an editor for musical scores written in the ABC notation. It allows you 
 
 Try it [here](http://www.tradtunedb.org.uk/#/editor).
 
-The melody is generated via MIDI using purescript-abc-melody.
+The melody is generated using purescript-abc-melody.
+
+The editor works best with VexFlow v4.0.2. Unfortunately, at the time of writing, the current VexFlow release (v4.2.3) is unusable because the score is rescaled after every keystroke!
 
 Building
 --------
