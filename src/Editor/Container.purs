@@ -24,7 +24,6 @@ import Editor.EditorComponent as ED
 import Editor.Transposition (MenuOption(..), keyMenuOptions, cMajor, showKeySig)
 import Editor.Window (print)
 import Effect.Aff.Class (class MonadAff)
-import Effect (Effect)
 import Halogen as H
 import Halogen.FileInputComponent as FIC
 import Halogen.HTML as HH
