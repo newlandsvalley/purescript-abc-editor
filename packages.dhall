@@ -109,6 +109,26 @@ let upstream =
         sha256:1f2f8be27ed474d333848bfae9db43790202e3b4da8d73584b1029260677d7e1
 
 in  upstream
+  with abc-parser =
+    { dependencies =
+      [ "bifunctors"
+      , "effect"
+      , "either"
+      , "foldable-traversable"
+      , "maybe"
+      , "midi"
+      , "ordered-collections"
+      , "profunctor-lenses"
+      , "rationals"
+      , "strings"
+      , "stringutils"
+      , "string-parsers"
+      , "transformers"
+      , "tuples"
+      ]
+    , repo = "https://github.com/newlandsvalley/purescript-abc-parser.git"
+    , version = "cf9d80458a11f5775471e345d44802823982724c"
+    }
   with abc-melody =
     { dependencies =
       [ "abc-parser"
@@ -129,7 +149,7 @@ in  upstream
       , "tuples"
       ]
     , repo = "https://github.com/newlandsvalley/purescript-abc-melody.git"
-    , version = "v0.3.1"
+    , version = "a7d237bcdc9837f662dd96c8d5fc62d37978d67d"
     }
   with abc-scores =
     { dependencies =
@@ -154,7 +174,7 @@ in  upstream
       , "unfoldable"
       ]
     , repo = "https://github.com/newlandsvalley/purescript-abc-scores.git"
-    , version = "v0.6.4"
+    , version = "b9448eebf4672bad642f45a69f595685ac36feab"
     }
   with rhythm-guitar =
     { dependencies =

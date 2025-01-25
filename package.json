@@ -1,11 +1,11 @@
 {
   "private": true,
   "scripts": {
-    "build": "spago build",
-    "example": "spago -x ./example.dhall bundle-app --main Example.Main --to example/dist/abc-editor.js"
+    "build": "spago-legacy build",
+    "example": "spago-legacy -x ./example.dhall bundle-app --main Example.Main --to example/dist/abc-editor.js"
   },
   "devDependencies": {
-    "purescript": "^0.15.10",
+    "purescript": "^0.15.15",
     "purescript-psa": "^0.5.1",
     "spago": "^0.21.0"
   },
