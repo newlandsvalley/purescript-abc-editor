@@ -46,12 +46,11 @@ workspace:
         - ordered-collections
         - prelude
         - rationals
-        - rhythm-guitar
         - soundfonts
         - transformers
         - tuples
       git: https://github.com/newlandsvalley/purescript-abc-melody.git
-      ref: 2377c3b428abe58f25239b52325ec38fb49f748b
+      ref: 5776b657079245be876616213febd4c7a7084483
     abc-parser:
       dependencies:
         - bifunctors
@@ -104,27 +103,5 @@ workspace:
         - soundfonts
       git: https://github.com/newlandsvalley/purescript-halogen-components.git
       ref: v0.6.0
-    rhythm-guitar:
-      dependencies:
-        - aff
-        - affjax
-        - affjax-web
-        - arrays
-        - console
-        - control
-        - effect
-        - either
-        - foreign
-        - http-methods
-        - maybe
-        - ordered-collections
-        - prelude
-        - simple-json
-        - soundfonts
-        - string-parsers
-        - strings
-        - tuples
-      git: https://github.com/newlandsvalley/RhythmGuitar.git
-      ref: v0.2.1
   packageSet:
     registry: 62.3.2

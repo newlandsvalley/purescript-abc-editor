@@ -9,7 +9,6 @@ import Data.Abc.Accidentals (fromKeySig)
 import Data.Abc.Canonical (fromTune)
 import Data.Abc.KeySignature (getKeySig)
 import Data.Abc.Melody (PlayableAbc(..), defaultPlayableAbcProperties)
-import Data.Abc.Melody.Types (MidiPitchChordMap)
 import Data.Abc.Octave as Octave
 import Data.Abc.Parser (parseKeySignature)
 import Data.Abc.Tempo (defaultTempo, getBpm, setBpm)
@@ -43,7 +42,6 @@ type Slot = H.Slot Query Void
 
 type State =
   { instruments :: Array Instrument
-  , chordMap :: MidiPitchChordMap
   , tuneResult :: Either ParseError AbcTune
   , fileName :: Maybe String
   , vexRenderer :: Maybe Score.Renderer
@@ -53,7 +51,6 @@ type State =
 
 type Input =
   { instruments :: Array Instrument
-  , chordMap :: MidiPitchChordMap
   , initialAbc :: Maybe String
   }
 
@@ -139,7 +136,6 @@ component =
   initialState :: Input -> State
   initialState input =
     { instruments: input.instruments
-    , chordMap: input.chordMap
     , tuneResult: ED.nullTune
     , fileName: Nothing
     , vexRenderer: Nothing
@@ -256,8 +252,7 @@ component =
       _ <- onNewTuneText maybeText
       pure unit
     HandleNewTuneText (ED.TuneResult r) -> do
-      state0 <- H.get
-      _ <- refreshPlayerState state0 r
+      _ <- refreshPlayerState r
       state <- H.get
       let
         abcTune = either (\_ -> emptyTune) (identity) r
@@ -336,13 +331,12 @@ onNewTuneText maybeText = do
 refreshPlayerState
   :: ∀ o m
    . MonadAff m
-  => State
-  -> Either ParseError AbcTune
+  => Either ParseError AbcTune
   -> H.HalogenM State Action ChildSlots o m Unit
-refreshPlayerState state tuneResult = do
+refreshPlayerState tuneResult = do
   _ <- either
     (\_ -> H.tell _player unit PC.StopMelody)
-    (\abcTune -> H.tell _player unit (PC.HandleNewPlayable (toPlayable state abcTune)))
+    (\abcTune -> H.tell _player unit (PC.HandleNewPlayable (toPlayable abcTune)))
     tuneResult
   pure unit
 
@@ -361,14 +355,13 @@ getFileName state =
           "untitled.abc"
 
 -- | convert a tune to a format recognized by the player
-toPlayable :: State -> AbcTune -> PlayableAbc
-toPlayable state abcTune =
+toPlayable :: AbcTune -> PlayableAbc
+toPlayable abcTune =
   let
     props = defaultPlayableAbcProperties
       { tune = abcTune
       , phraseSize = 0.9
       , generateIntro = false
-      , chordMap = state.chordMap
       }
   in
     PlayableAbc props
@@ -441,7 +434,7 @@ renderPlayer state =
         [ HP.class_ (H.ClassName "leftPanelComponent")
         , HP.id "player-div"
         ]
-        [ HH.slot _player unit (PC.component (toPlayable state abcTune) state.instruments) unit HandleTuneIsPlaying ]
+        [ HH.slot _player unit (PC.component (toPlayable abcTune) state.instruments) unit HandleTuneIsPlaying ]
     Left _ ->
       HH.div_
         []

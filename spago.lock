@@ -107,10 +107,8 @@
             "rationals",
             "record",
             "refs",
-            "rhythm-guitar",
             "safe-coerce",
             "signal",
-            "simple-json",
             "soundfonts",
             "st",
             "string-parsers",
@@ -125,7 +123,6 @@
             "unfoldable",
             "unsafe-coerce",
             "unsafe-reference",
-            "variant",
             "web-clipboard",
             "web-dom",
             "web-events",
@@ -241,10 +238,8 @@
             "rationals",
             "record",
             "refs",
-            "rhythm-guitar",
             "safe-coerce",
             "signal",
-            "simple-json",
             "soundfonts",
             "st",
             "string-parsers",
@@ -259,7 +254,6 @@
             "unfoldable",
             "unsafe-coerce",
             "unsafe-reference",
-            "variant",
             "web-clipboard",
             "web-dom",
             "web-events",
@@ -804,7 +798,7 @@
     "extra_packages": {
       "abc-melody": {
         "git": "https://github.com/newlandsvalley/purescript-abc-melody.git",
-        "ref": "2377c3b428abe58f25239b52325ec38fb49f748b",
+        "ref": "5776b657079245be876616213febd4c7a7084483",
         "dependencies": [
           "abc-parser",
           "arrays",
@@ -818,7 +812,6 @@
           "ordered-collections",
           "prelude",
           "rationals",
-          "rhythm-guitar",
           "soundfonts",
           "transformers",
           "tuples"
@@ -881,30 +874,6 @@
           "js-fileio",
           "soundfonts"
         ]
-      },
-      "rhythm-guitar": {
-        "git": "https://github.com/newlandsvalley/RhythmGuitar.git",
-        "ref": "v0.2.1",
-        "dependencies": [
-          "aff",
-          "affjax",
-          "affjax-web",
-          "arrays",
-          "console",
-          "control",
-          "effect",
-          "either",
-          "foreign",
-          "http-methods",
-          "maybe",
-          "ordered-collections",
-          "prelude",
-          "simple-json",
-          "soundfonts",
-          "string-parsers",
-          "strings",
-          "tuples"
-        ]
       }
     }
   },
@@ -912,7 +881,7 @@
     "abc-melody": {
       "type": "git",
       "url": "https://github.com/newlandsvalley/purescript-abc-melody.git",
-      "rev": "2377c3b428abe58f25239b52325ec38fb49f748b",
+      "rev": "5776b657079245be876616213febd4c7a7084483",
       "dependencies": [
         "abc-parser",
         "arrays",
@@ -926,7 +895,6 @@
         "ordered-collections",
         "prelude",
         "rationals",
-        "rhythm-guitar",
         "soundfonts",
         "transformers",
         "tuples"
@@ -1961,31 +1929,6 @@
         "prelude"
       ]
     },
-    "rhythm-guitar": {
-      "type": "git",
-      "url": "https://github.com/newlandsvalley/RhythmGuitar.git",
-      "rev": "5e533fa42902f9039524dacdf7fc94897ae31825",
-      "dependencies": [
-        "aff",
-        "affjax",
-        "affjax-web",
-        "arrays",
-        "console",
-        "control",
-        "effect",
-        "either",
-        "foreign",
-        "http-methods",
-        "maybe",
-        "ordered-collections",
-        "prelude",
-        "simple-json",
-        "soundfonts",
-        "string-parsers",
-        "strings",
-        "tuples"
-      ]
-    },
     "safe-coerce": {
       "type": "registry",
       "version": "2.0.0",
@@ -2005,22 +1948,6 @@
         "foldable-traversable",
         "maybe",
         "prelude"
-      ]
-    },
-    "simple-json": {
-      "type": "registry",
-      "version": "9.0.0",
-      "integrity": "sha256-K3RJaThqsszTd+TEklzZmAdDqvIHWgXIfKqlsoykU1c=",
-      "dependencies": [
-        "arrays",
-        "exceptions",
-        "foreign",
-        "foreign-object",
-        "nullable",
-        "prelude",
-        "record",
-        "typelevel-prelude",
-        "variant"
       ]
     },
     "soundfonts": {
@@ -2219,21 +2146,6 @@
       "integrity": "sha256-zU7BhfJU14nXQRZG9iADsp0mSiKhz07OcKyjRB2YT+Y=",
       "dependencies": [
         "prelude"
-      ]
-    },
-    "variant": {
-      "type": "registry",
-      "version": "8.0.0",
-      "integrity": "sha256-SR//zQDg2dnbB8ZHslcxieUkCeNlbMToapvmh9onTtw=",
-      "dependencies": [
-        "enums",
-        "lists",
-        "maybe",
-        "partial",
-        "prelude",
-        "record",
-        "tuples",
-        "unsafe-coerce"
       ]
     },
     "web-clipboard": {
