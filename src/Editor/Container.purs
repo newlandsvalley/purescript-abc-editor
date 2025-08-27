@@ -361,7 +361,6 @@ toPlayable abcTune =
     props = defaultPlayableAbcProperties
       { tune = abcTune
       , phraseSize = 0.9
-      , generateIntro = false
       }
   in
     PlayableAbc props
