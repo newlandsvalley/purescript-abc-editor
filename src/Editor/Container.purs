@@ -41,9 +41,11 @@ import VexFlow.Types (Config, Titling(..))
 
 type Slot = H.Slot Query Void
 
+type TuneResult = Either ParseError AbcTune
+
 type State =
   { instruments :: Array Instrument
-  , tuneResult :: Either ParseError AbcTune
+  , tuneResult :: TuneResult
   , fileName :: Maybe String
   , vexRenderer :: Maybe Score.Renderer
   , vexAligned :: Boolean
@@ -237,19 +239,19 @@ component =
     HandleTempoInput bpm -> do
       state <- H.get
       let
-        maybeText = changeTune (setBpm bpm) state
+        maybeText = changeTune (setBpm bpm) state.tuneResult
       _ <- onNewTuneText maybeText
       pure unit
     HandleMoveOctave isUp -> do
       state <- H.get
       let
-        maybeText = changeTune (Octave.move isUp) state
+        maybeText = changeTune (Octave.move isUp) state.tuneResult
       _ <- onNewTuneText maybeText
       pure unit
     HandleTranspositionKey keyString -> do
       state <- H.get
       let
-        maybeText = transposeTune keyString state
+        maybeText = transposeTune keyString state.tuneResult
       _ <- onNewTuneText maybeText
       pure unit
     HandleNewTuneText (ED.TuneResult r) -> do
@@ -332,7 +334,7 @@ onNewTuneText maybeText = do
 refreshPlayerState
   :: ∀ o m
    . MonadAff m
-  => Either ParseError AbcTune
+  => TuneResult
   -> H.HalogenM State Action ChildSlots o m Unit
 refreshPlayerState tuneResult = do
   _ <- either
@@ -551,20 +553,20 @@ renderTranspositionMenu state =
 -- Tune modication functions
 
 -- | apply a function to change the ABC tune and return the new tune text
-changeTune :: (AbcTune -> AbcTune) -> State -> Maybe String
-changeTune f state =
-  case state.tuneResult of
+changeTune :: (AbcTune -> AbcTune) -> TuneResult -> Maybe String
+changeTune f tuneResult =
+  case tuneResult of
     Right tune ->
       Just (fromTune $ f tune)
     _ ->
       Nothing
 
 -- | transpose
-transposeTune :: String -> State -> Maybe String
-transposeTune s state =
+transposeTune :: String -> TuneResult -> Maybe String
+transposeTune s tuneResult =
   case parseKeySignature s of
     Right mks ->
-      changeTune (transposeTo $ fromKeySig mks.keySignature) state
+      changeTune (transposeTo $ fromKeySig mks.keySignature) tuneResult
     Left _ ->
       Nothing
 
