@@ -11,6 +11,7 @@ import Data.Abc.KeySignature (getKeySig)
 import Data.Abc.Melody (PlayableAbc(..), defaultPlayableAbcProperties)
 import Data.Abc.Octave as Octave
 import Data.Abc.Parser (parseKeySignature)
+import Data.String (trim)
 import Data.Abc.Tempo (defaultTempo, getBpm, setBpm)
 import Data.Abc.Transposition (transposeTo)
 import Data.Abc.Utils (getTitle)
@@ -229,7 +230,7 @@ component =
       state <- H.get
       let
         fileName = getFileName state
-        text = fromMaybe "" maybeText
+        text = cleanEndOfText $ fromMaybe "" maybeText
         fsp = { name: fileName, contents: text } :: Filespec
       _ <- H.liftEffect $ saveTextFile fsp
       pure unit
@@ -566,4 +567,10 @@ transposeTune s state =
       changeTune (transposeTo $ fromKeySig mks.keySignature) state
     Left _ ->
       Nothing
+
+-- | clean the end of text (before saving)
+-- | remove any superfluous carriage returns etc. We only need the one.
+cleanEndOfText :: String -> String 
+cleanEndOfText s = 
+  trim s <> "\n"
 
