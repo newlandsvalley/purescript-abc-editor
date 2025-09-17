@@ -97,7 +97,7 @@ handleQuery = case _ of
           nullTune
         else
           -- we need to add a terminating bar line
-          parse (s <> "|\r\n")
+          parse (s <> "|\n")
       parseError = either Just (const Nothing) tuneResult
     _ <- H.modify (\state -> state { text = s, parseError = parseError })
     H.raise $ TuneResult tuneResult

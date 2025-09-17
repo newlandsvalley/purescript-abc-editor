@@ -10,7 +10,7 @@ import Data.Abc.Canonical (fromTune)
 import Data.Abc.KeySignature (getKeySig)
 import Data.Abc.Melody (PlayableAbc(..), defaultPlayableAbcProperties)
 import Data.Abc.Octave as Octave
-import Data.Abc.Parser (parseKeySignature)
+import Data.Abc.Parser (parse, parseKeySignature)
 import Data.String (trim)
 import Data.Abc.Tempo (defaultTempo, getBpm, setBpm)
 import Data.Abc.Transposition (transposeTo)
@@ -237,21 +237,24 @@ component =
       _ <- H.liftEffect $ saveTextFile fsp
       pure unit
     HandleTempoInput bpm -> do
-      state <- H.get
+      mEditorText <- H.request _editor unit ED.GetText
       let
-        maybeText = changeTune (setBpm bpm) state.tuneResult
+        text = cleanEndOfText $ fromMaybe "" mEditorText
+        maybeText = changeTune (setBpm bpm) text
       _ <- onNewTuneText maybeText
       pure unit
     HandleMoveOctave isUp -> do
-      state <- H.get
+      mEditorText <- H.request _editor unit ED.GetText
       let
-        maybeText = changeTune (Octave.move isUp) state.tuneResult
+        text = cleanEndOfText $ fromMaybe "" mEditorText
+        maybeText = changeTune (Octave.move isUp) text
       _ <- onNewTuneText maybeText
       pure unit
     HandleTranspositionKey keyString -> do
-      state <- H.get
+      mEditorText <- H.request _editor unit ED.GetText
       let
-        maybeText = transposeTune keyString state.tuneResult
+        text = cleanEndOfText $ fromMaybe "" mEditorText
+        maybeText = transposeTune keyString text
       _ <- onNewTuneText maybeText
       pure unit
     HandleNewTuneText (ED.TuneResult r) -> do
@@ -553,20 +556,22 @@ renderTranspositionMenu state =
 -- Tune modication functions
 
 -- | apply a function to change the ABC tune and return the new tune text
-changeTune :: (AbcTune -> AbcTune) -> TuneResult -> Maybe String
-changeTune f tuneResult =
-  case tuneResult of
+-- | We must re-parse the tune here because the editor's parse result contains
+-- | a sequence "|\n" which it adds to ensure the final bar is completed.
+changeTune :: (AbcTune -> AbcTune) -> String -> Maybe String
+changeTune f abc =
+  case (parse abc) of
     Right tune ->
       Just (fromTune $ f tune)
     _ ->
       Nothing
 
 -- | transpose
-transposeTune :: String -> TuneResult -> Maybe String
-transposeTune s tuneResult =
+transposeTune :: String -> String -> Maybe String
+transposeTune s abc =
   case parseKeySignature s of
     Right mks ->
-      changeTune (transposeTo $ fromKeySig mks.keySignature) tuneResult
+      changeTune (transposeTo $ fromKeySig mks.keySignature) abc
     Left _ ->
       Nothing
 
