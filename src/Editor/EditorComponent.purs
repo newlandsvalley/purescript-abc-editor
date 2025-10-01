@@ -136,13 +136,18 @@ renderParseError state =
             errorChar =
               A.slice pos (pos + 1) txt
           in
-            HH.p_
-              [ HH.text $ error <> " - "
-              , HH.text $ fromCharArray errorPrefix
-              , HH.span
-                  [ errorHighlightStyle ]
-                  [ HH.text (fromCharArray errorChar) ]
-              , HH.text $ fromCharArray errorSuffix
+            HH.div_
+              [ HH.div
+                  [ HP.id "highlighted-abc-error" ] 
+                  [ HH.text $ "invalid ABC " <> error <> " at:  " ]
+              , HH.div
+                  [ HP.id "unhighlighted-abc-error" ] 
+                  [ HH.text $ fromCharArray errorPrefix
+                  , HH.span
+                    [ errorHighlightStyle ]
+                    [ HH.text (fromCharArray errorChar) ]
+                  , HH.text $ fromCharArray errorSuffix
+                  ]
               ]
       _ ->
         HH.div_ []

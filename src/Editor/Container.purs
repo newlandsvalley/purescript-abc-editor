@@ -37,7 +37,7 @@ import StringParser (ParseError)
 import Type.Proxy (Proxy(..))
 import VexFlow.Score (Renderer, clearCanvas, renderRightAlignedTune, renderTune, initialiseCanvas) as Score
 import VexFlow.Abc.TickableContext (defaultNoteSeparation)
-import VexFlow.Types (Config, Titling(..))
+import VexFlow.Types (Config, RenderingError, Titling(..))
 
 type Slot = H.Slot Query Void
 
@@ -50,6 +50,7 @@ type State =
   , vexRenderer :: Maybe Score.Renderer
   , vexAligned :: Boolean
   , initialAbc :: Maybe String
+  , scoreRenderingError :: Maybe RenderingError
   }
 
 type Input =
@@ -144,6 +145,7 @@ component =
     , vexRenderer: Nothing
     , vexAligned: false
     , initialAbc: input.initialAbc
+    , scoreRenderingError: Nothing
     }
 
   render :: State -> H.ComponentHTML Action ChildSlots m
@@ -202,6 +204,7 @@ component =
     , HH.div
         [ HP.class_ (H.ClassName "rightPane") ]
         [ HH.slot _editor unit ED.component unit HandleNewTuneText
+        , renderScoreError state
         ]
     , renderScore state
     ]
@@ -223,6 +226,7 @@ component =
         ( \st -> st
             { fileName = Nothing
             , vexAligned = false
+            , scoreRenderingError = Nothing
             }
         )
       _ <- H.tell _editor unit (ED.UpdateContent "")
@@ -266,11 +270,15 @@ component =
         Just renderer -> do
           _ <- H.liftEffect $ Score.clearCanvas $ renderer
           -- render the score with no RHS alignment
-          _ <- H.liftEffect $ Score.renderTune vexConfig renderer abcTune
+          mRenderingError <- H.liftEffect $ Score.renderTune vexConfig renderer abcTune
+          let 
+            scoreRenderingError = 
+              if (null abcTune.body) then Nothing else mRenderingError
           _ <- H.modify
             ( \st -> st
                 { tuneResult = r
                 , vexAligned = false
+                , scoreRenderingError = scoreRenderingError
                 }
             )
           pure unit
@@ -552,6 +560,21 @@ renderTranspositionMenu state =
           ]
           (map f $ keyMenuOptions mks.keySignature)
       ]
+
+renderScoreError
+  :: ∀ m
+   . MonadAff m
+  => State
+  -> H.ComponentHTML Action ChildSlots m
+renderScoreError state =
+  case state.scoreRenderingError of 
+    Nothing ->
+      HH.div_ []
+    Just err -> do
+      HH.div
+        [ HP.id "highlighted-abc-error" ]
+        [ HH.text err
+        ]
 
 -- Tune modication functions
 
