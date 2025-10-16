@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## v1.1.4 (2025-10-16)
+## v1.1.5 (2025-10-16)
 
   * Improved error messaging
 
