@@ -845,7 +845,7 @@
       },
       "abc-scores": {
         "git": "https://github.com/newlandsvalley/purescript-abc-scores.git",
-        "ref": "v0.6.7",
+        "ref": "v0.6.8",
         "dependencies": [
           "abc-parser",
           "arrays",
@@ -940,7 +940,7 @@
     "abc-scores": {
       "type": "git",
       "url": "https://github.com/newlandsvalley/purescript-abc-scores.git",
-      "rev": "49fa1fffbf512fa5f177e2032f9f02c165bc418c",
+      "rev": "9677b0f208db82831f94e1c8eff0cb029e605dfa",
       "dependencies": [
         "abc-parser",
         "arrays",

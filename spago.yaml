@@ -73,7 +73,7 @@ workspace:
         - tuples
         - unfoldable
       git: https://github.com/newlandsvalley/purescript-abc-scores.git
-      ref: v0.6.7
+      ref: v0.6.8
     halogen-components:
       dependencies:
         - console
