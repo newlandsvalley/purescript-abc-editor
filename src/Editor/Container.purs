@@ -18,7 +18,7 @@ import Data.Abc.Utils (getTitle)
 import Data.Either (Either(..), either, hush, isLeft)
 import Data.Int (fromString)
 import Data.List (List(..), null)
-import Data.Maybe (Maybe(..), fromJust, fromMaybe, isJust, isNothing)
+import Data.Maybe (Maybe(..), fromJust, fromMaybe, isJust)
 import Data.MediaType (MediaType(..))
 import Editor.EditorComponent as ED
 import Editor.Transposition (MenuOption(..), keyMenuOptions, cMajor, showKeySig)
@@ -49,7 +49,6 @@ type State =
   , tuneResult :: TuneResult
   , fileName :: Maybe String
   , vexRenderer :: Maybe Score.Renderer
-  , vexAligned :: Boolean
   , initialAbc :: Maybe String
   , scoreRenderingError :: Maybe RenderingError
   , mAlignmentConfig :: Maybe Config  -- the potential config after aligning the score
@@ -145,7 +144,6 @@ component =
     , tuneResult: ED.nullTune
     , fileName: Nothing
     , vexRenderer: Nothing
-    , vexAligned: false
     , initialAbc: input.initialAbc
     , scoreRenderingError: Nothing
     , mAlignmentConfig: Nothing
@@ -229,7 +227,6 @@ component =
       _ <- H.modify
         ( \st -> st
             { fileName = Nothing
-            , vexAligned = false
             , scoreRenderingError = Nothing
             , mAlignmentConfig = Nothing
             }
@@ -282,7 +279,6 @@ component =
           _ <- H.modify
             ( \st -> st
                 { tuneResult = r
-                , vexAligned = false
                 , scoreRenderingError = scoreRenderingError
                 , mAlignmentConfig = Nothing
                 }
@@ -308,7 +304,7 @@ component =
           _ <- H.liftEffect $ Score.clearCanvas renderer
           -- right align the score -- all the score right-hand sides align
           mRenderError <- H.liftEffect $ Score.renderRightAlignedTune vexConfig renderer abcTune
-          _ <- H.modify (\st -> st { vexAligned = isNothing mRenderError, mAlignmentConfig = Just alignmentConfig })
+          _ <- H.modify (\st -> st { scoreRenderingError = mRenderError, mAlignmentConfig = Just alignmentConfig })
           pure unit
         _ ->
           pure unit
