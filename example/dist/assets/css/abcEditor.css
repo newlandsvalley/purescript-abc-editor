@@ -79,7 +79,8 @@ label {
   margin: 4px 0 4px 0;
 } 
 
-#unhighlighted-abc-error {
+#unhighlighted-abc-error, 
+#edit-information {
   display: inline-block;
   font-size: 1.5em;
   margin: 4px 0 4px 0;

@@ -35,7 +35,8 @@ import JS.FileIO (Filespec, saveTextFile)
 import Partial.Unsafe (unsafePartial)
 import StringParser (ParseError)
 import Type.Proxy (Proxy(..))
-import VexFlow.Score (Renderer, clearCanvas, renderRightAlignedTune, renderTune, initialiseCanvas) as Score
+import VexFlow.Score (Renderer, clearCanvas, createScore, renderRightAlignedTune, renderTune, initialiseCanvas) as Score
+import VexFlow.Abc.Alignment (justifiedScoreConfig)
 import VexFlow.Abc.TickableContext (defaultNoteSeparation)
 import VexFlow.Types (Config, RenderingError, Titling(..))
 
@@ -51,6 +52,7 @@ type State =
   , vexAligned :: Boolean
   , initialAbc :: Maybe String
   , scoreRenderingError :: Maybe RenderingError
+  , mAlignmentConfig :: Maybe Config  -- the potential config after aligning the score
   }
 
 type Input =
@@ -146,6 +148,7 @@ component =
     , vexAligned: false
     , initialAbc: input.initialAbc
     , scoreRenderingError: Nothing
+    , mAlignmentConfig: Nothing
     }
 
   render :: State -> H.ComponentHTML Action ChildSlots m
@@ -206,6 +209,7 @@ component =
         [ HH.slot _editor unit ED.component unit HandleNewTuneText
         , renderScoreError state
         ]
+    , renderAlignmentSize state
     , renderScore state
     ]
 
@@ -217,7 +221,7 @@ component =
       _ <- handleQuery (InitQuery unit)
       pure unit
     HandleABCFile (FIC.FileLoaded filespec) -> do
-      _ <- H.modify (\st -> st { fileName = Just filespec.name })
+      _ <- H.modify (\st -> st { fileName = Just filespec.name, mAlignmentConfig = Nothing })
       _ <- H.tell _editor unit (ED.UpdateContent filespec.contents)
       _ <- H.tell _player unit PC.StopMelody
       pure unit
@@ -227,6 +231,7 @@ component =
             { fileName = Nothing
             , vexAligned = false
             , scoreRenderingError = Nothing
+            , mAlignmentConfig = Nothing
             }
         )
       _ <- H.tell _editor unit (ED.UpdateContent "")
@@ -279,6 +284,7 @@ component =
                 { tuneResult = r
                 , vexAligned = false
                 , scoreRenderingError = scoreRenderingError
+                , mAlignmentConfig = Nothing
                 }
             )
           pure unit
@@ -295,10 +301,14 @@ component =
         Just renderer -> do
           let
             abcTune = either (\_ -> emptyTune) (identity) state.tuneResult
+            -- create the unaligned score just so that we can work out the dimensions of 
+            -- the canvas it would have when right-justified
+            score = Score.createScore vexConfig abcTune
+            alignmentConfig = justifiedScoreConfig score vexConfig
           _ <- H.liftEffect $ Score.clearCanvas renderer
           -- right align the score -- all the score right-hand sides align
           mRenderError <- H.liftEffect $ Score.renderRightAlignedTune vexConfig renderer abcTune
-          _ <- H.modify (\st -> st { vexAligned = isNothing mRenderError })
+          _ <- H.modify (\st -> st { vexAligned = isNothing mRenderError, mAlignmentConfig = Just alignmentConfig })
           pure unit
         _ ->
           pure unit
@@ -573,8 +583,21 @@ renderScoreError state =
     Just err -> do
       HH.div
         [ HP.id "highlighted-abc-error" ]
-        [ HH.text err
-        ]
+        [ HH.text err ]
+
+renderAlignmentSize
+  :: ∀ m
+   . MonadAff m
+  => State
+  -> H.ComponentHTML Action ChildSlots m
+renderAlignmentSize state =
+  case state.mAlignmentConfig of 
+    Nothing ->
+      HH.div_ []
+    Just config -> do
+      HH.div
+        [ HP.id "edit-information"]
+        [ HH.text ("alignment size: " <> show config.width <> " x " <> show config.height)]
 
 -- Tune modication functions
 
