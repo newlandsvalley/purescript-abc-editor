@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v1.1.6
+
+  * Display score size after alignment option chosen
+
 ## v1.1.5 (2025-10-16)
 
   * Improved error messaging
