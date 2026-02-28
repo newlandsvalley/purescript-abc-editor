@@ -9,16 +9,16 @@ import Data.Abc.Accidentals (fromKeySig)
 import Data.Abc.Canonical (fromTune)
 import Data.Abc.KeySignature (getKeySig)
 import Data.Abc.Melody (PlayableAbc(..), defaultPlayableAbcProperties)
-import Data.Abc.Melody.Types (MidiPitchChordMap)
 import Data.Abc.Octave as Octave
-import Data.Abc.Parser (parseKeySignature)
+import Data.Abc.Parser (parse, parseKeySignature)
+import Data.String (trim)
 import Data.Abc.Tempo (defaultTempo, getBpm, setBpm)
 import Data.Abc.Transposition (transposeTo)
 import Data.Abc.Utils (getTitle)
 import Data.Either (Either(..), either, hush, isLeft)
 import Data.Int (fromString)
 import Data.List (List(..), null)
-import Data.Maybe (Maybe(..), fromJust, fromMaybe, isJust, isNothing)
+import Data.Maybe (Maybe(..), fromJust, fromMaybe, isJust)
 import Data.MediaType (MediaType(..))
 import Editor.EditorComponent as ED
 import Editor.Transposition (MenuOption(..), keyMenuOptions, cMajor, showKeySig)
@@ -35,25 +35,27 @@ import JS.FileIO (Filespec, saveTextFile)
 import Partial.Unsafe (unsafePartial)
 import StringParser (ParseError)
 import Type.Proxy (Proxy(..))
-import VexFlow.Score (Renderer, clearCanvas, renderRightAlignedTune, renderTune, initialiseCanvas) as Score
+import VexFlow.Score (Renderer, clearCanvas, createScore, renderRightAlignedTune, renderTune, initialiseCanvas) as Score
+import VexFlow.Abc.Alignment (justifiedScoreConfig)
 import VexFlow.Abc.TickableContext (defaultNoteSeparation)
-import VexFlow.Types (Config, Titling(..))
+import VexFlow.Types (Config, RenderingError, Titling(..))
 
 type Slot = H.Slot Query Void
 
+type TuneResult = Either ParseError AbcTune
+
 type State =
   { instruments :: Array Instrument
-  , chordMap :: MidiPitchChordMap
-  , tuneResult :: Either ParseError AbcTune
+  , tuneResult :: TuneResult
   , fileName :: Maybe String
   , vexRenderer :: Maybe Score.Renderer
-  , vexAligned :: Boolean
   , initialAbc :: Maybe String
+  , scoreRenderingError :: Maybe RenderingError
+  , mAlignmentConfig :: Maybe Config  -- the potential config after aligning the score
   }
 
 type Input =
   { instruments :: Array Instrument
-  , chordMap :: MidiPitchChordMap
   , initialAbc :: Maybe String
   }
 
@@ -105,7 +107,7 @@ vexConfig =
   { parentElementId: "vexflow"
   , width: 1300
   , height: 700
-  , scale: 0.8
+  , scale: 0.75
   , isSVG: true
   , titling: NoTitle
   , noteSeparation: defaultNoteSeparation
@@ -139,12 +141,12 @@ component =
   initialState :: Input -> State
   initialState input =
     { instruments: input.instruments
-    , chordMap: input.chordMap
     , tuneResult: ED.nullTune
     , fileName: Nothing
     , vexRenderer: Nothing
-    , vexAligned: false
     , initialAbc: input.initialAbc
+    , scoreRenderingError: Nothing
+    , mAlignmentConfig: Nothing
     }
 
   render :: State -> H.ComponentHTML Action ChildSlots m
@@ -203,7 +205,9 @@ component =
     , HH.div
         [ HP.class_ (H.ClassName "rightPane") ]
         [ HH.slot _editor unit ED.component unit HandleNewTuneText
+        , renderScoreError state
         ]
+    , renderAlignmentSize state
     , renderScore state
     ]
 
@@ -215,7 +219,7 @@ component =
       _ <- handleQuery (InitQuery unit)
       pure unit
     HandleABCFile (FIC.FileLoaded filespec) -> do
-      _ <- H.modify (\st -> st { fileName = Just filespec.name })
+      _ <- H.modify (\st -> st { fileName = Just filespec.name, mAlignmentConfig = Nothing })
       _ <- H.tell _editor unit (ED.UpdateContent filespec.contents)
       _ <- H.tell _player unit PC.StopMelody
       pure unit
@@ -223,7 +227,8 @@ component =
       _ <- H.modify
         ( \st -> st
             { fileName = Nothing
-            , vexAligned = false
+            , scoreRenderingError = Nothing
+            , mAlignmentConfig = Nothing
             }
         )
       _ <- H.tell _editor unit (ED.UpdateContent "")
@@ -233,31 +238,33 @@ component =
       state <- H.get
       let
         fileName = getFileName state
-        text = fromMaybe "" maybeText
+        text = cleanEndOfText $ fromMaybe "" maybeText
         fsp = { name: fileName, contents: text } :: Filespec
       _ <- H.liftEffect $ saveTextFile fsp
       pure unit
     HandleTempoInput bpm -> do
-      state <- H.get
+      mEditorText <- H.request _editor unit ED.GetText
       let
-        maybeText = changeTune (setBpm bpm) state
+        text = cleanEndOfText $ fromMaybe "" mEditorText
+        maybeText = changeTune (setBpm bpm) text
       _ <- onNewTuneText maybeText
       pure unit
     HandleMoveOctave isUp -> do
-      state <- H.get
+      mEditorText <- H.request _editor unit ED.GetText
       let
-        maybeText = changeTune (Octave.move isUp) state
+        text = cleanEndOfText $ fromMaybe "" mEditorText
+        maybeText = changeTune (Octave.move isUp) text
       _ <- onNewTuneText maybeText
       pure unit
     HandleTranspositionKey keyString -> do
-      state <- H.get
+      mEditorText <- H.request _editor unit ED.GetText
       let
-        maybeText = transposeTune keyString state
+        text = cleanEndOfText $ fromMaybe "" mEditorText
+        maybeText = transposeTune keyString text
       _ <- onNewTuneText maybeText
       pure unit
     HandleNewTuneText (ED.TuneResult r) -> do
-      state0 <- H.get
-      _ <- refreshPlayerState state0 r
+      _ <- refreshPlayerState r
       state <- H.get
       let
         abcTune = either (\_ -> emptyTune) (identity) r
@@ -265,11 +272,15 @@ component =
         Just renderer -> do
           _ <- H.liftEffect $ Score.clearCanvas $ renderer
           -- render the score with no RHS alignment
-          _ <- H.liftEffect $ Score.renderTune vexConfig renderer abcTune
+          mRenderingError <- H.liftEffect $ Score.renderTune vexConfig renderer abcTune
+          let 
+            scoreRenderingError = 
+              if (null abcTune.body) then Nothing else mRenderingError
           _ <- H.modify
             ( \st -> st
                 { tuneResult = r
-                , vexAligned = false
+                , scoreRenderingError = scoreRenderingError
+                , mAlignmentConfig = Nothing
                 }
             )
           pure unit
@@ -286,10 +297,14 @@ component =
         Just renderer -> do
           let
             abcTune = either (\_ -> emptyTune) (identity) state.tuneResult
+            -- create the unaligned score just so that we can work out the dimensions of 
+            -- the canvas it would have when right-justified
+            score = Score.createScore vexConfig abcTune
+            alignmentConfig = justifiedScoreConfig score vexConfig
           _ <- H.liftEffect $ Score.clearCanvas renderer
           -- right align the score -- all the score right-hand sides align
           mRenderError <- H.liftEffect $ Score.renderRightAlignedTune vexConfig renderer abcTune
-          _ <- H.modify (\st -> st { vexAligned = isNothing mRenderError })
+          _ <- H.modify (\st -> st { scoreRenderingError = mRenderError, mAlignmentConfig = Just alignmentConfig })
           pure unit
         _ ->
           pure unit
@@ -336,13 +351,12 @@ onNewTuneText maybeText = do
 refreshPlayerState
   :: ∀ o m
    . MonadAff m
-  => State
-  -> Either ParseError AbcTune
+  => TuneResult
   -> H.HalogenM State Action ChildSlots o m Unit
-refreshPlayerState state tuneResult = do
+refreshPlayerState tuneResult = do
   _ <- either
     (\_ -> H.tell _player unit PC.StopMelody)
-    (\abcTune -> H.tell _player unit (PC.HandleNewPlayable (toPlayable state abcTune)))
+    (\abcTune -> H.tell _player unit (PC.HandleNewPlayable (toPlayable abcTune)))
     tuneResult
   pure unit
 
@@ -361,14 +375,12 @@ getFileName state =
           "untitled.abc"
 
 -- | convert a tune to a format recognized by the player
-toPlayable :: State -> AbcTune -> PlayableAbc
-toPlayable state abcTune =
+toPlayable :: AbcTune -> PlayableAbc
+toPlayable abcTune =
   let
     props = defaultPlayableAbcProperties
       { tune = abcTune
       , phraseSize = 0.9
-      , generateIntro = false
-      , chordMap = state.chordMap
       }
   in
     PlayableAbc props
@@ -441,7 +453,7 @@ renderPlayer state =
         [ HP.class_ (H.ClassName "leftPanelComponent")
         , HP.id "player-div"
         ]
-        [ HH.slot _player unit (PC.component (toPlayable state abcTune) state.instruments) unit HandleTuneIsPlaying ]
+        [ HH.slot _player unit (PC.component (toPlayable abcTune) state.instruments) unit HandleTuneIsPlaying ]
     Left _ ->
       HH.div_
         []
@@ -555,22 +567,59 @@ renderTranspositionMenu state =
           (map f $ keyMenuOptions mks.keySignature)
       ]
 
+renderScoreError
+  :: ∀ m
+   . MonadAff m
+  => State
+  -> H.ComponentHTML Action ChildSlots m
+renderScoreError state =
+  case state.scoreRenderingError of 
+    Nothing ->
+      HH.div_ []
+    Just err -> do
+      HH.div
+        [ HP.id "highlighted-abc-error" ]
+        [ HH.text err ]
+
+renderAlignmentSize
+  :: ∀ m
+   . MonadAff m
+  => State
+  -> H.ComponentHTML Action ChildSlots m
+renderAlignmentSize state =
+  case state.mAlignmentConfig of 
+    Nothing ->
+      HH.div_ []
+    Just config -> do
+      HH.div
+        [ HP.id "edit-information"]
+        [ HH.text ("alignment size: " <> show config.width <> " x " <> show config.height)]
+
 -- Tune modication functions
 
 -- | apply a function to change the ABC tune and return the new tune text
-changeTune :: (AbcTune -> AbcTune) -> State -> Maybe String
-changeTune f state =
-  case state.tuneResult of
+-- | We must re-parse the tune here because the editor's parse result contains
+-- | a sequence "|\n" which it adds to ensure the final bar is completed.
+changeTune :: (AbcTune -> AbcTune) -> String -> Maybe String
+changeTune f abc =
+  case (parse abc) of
     Right tune ->
       Just (fromTune $ f tune)
     _ ->
       Nothing
 
 -- | transpose
-transposeTune :: String -> State -> Maybe String
-transposeTune s state =
+transposeTune :: String -> String -> Maybe String
+transposeTune s abc =
   case parseKeySignature s of
     Right mks ->
-      changeTune (transposeTo $ fromKeySig mks.keySignature) state
+      changeTune (transposeTo $ fromKeySig mks.keySignature) abc
     Left _ ->
       Nothing
+
+-- | clean the end of text (before saving)
+-- | remove any superfluous carriage returns etc. We only need the one.
+cleanEndOfText :: String -> String 
+cleanEndOfText s = 
+  trim s <> "\n"
+

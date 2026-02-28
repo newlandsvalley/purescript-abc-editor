@@ -1,0 +1,11 @@
+package:
+  name: example
+  dependencies:
+    - aff
+    - console
+    - effect
+    - abc-scores
+    - abc-melody
+    - abc-editor
+    - halogen
+    - halogen-components

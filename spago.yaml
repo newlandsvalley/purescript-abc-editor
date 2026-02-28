@@ -1,0 +1,89 @@
+package:
+  dependencies:
+    - abc-melody
+    - abc-parser
+    - abc-scores
+    - aff
+    - arrays
+    - colors
+    - console
+    - css
+    - dom-indexed
+    - effect
+    - either
+    - halogen
+    - halogen-components
+    - halogen-css
+    - integers
+    - js-fileio
+    - lists
+    - maybe
+    - media-types
+    - partial
+    - prelude
+    - soundfonts
+    - string-parsers
+    - strings
+  name: abc-editor
+  test:
+    main: Test.Main
+    dependencies:
+      - console
+      - effect
+workspace:
+  extraPackages:
+    abc-melody:
+      dependencies:
+        - abc-parser
+        - arrays
+        - bifunctors
+        - either
+        - foldable-traversable
+        - integers
+        - lists
+        - maybe
+        - newtype
+        - ordered-collections
+        - prelude
+        - rationals
+        - soundfonts
+        - transformers
+        - tuples
+      git: https://github.com/newlandsvalley/purescript-abc-melody.git
+      ref: v0.4.0
+    abc-scores:
+      dependencies:
+        - abc-parser
+        - arrays
+        - console
+        - effect
+        - either
+        - foldable-traversable
+        - integers
+        - lists
+        - maybe
+        - newtype
+        - ordered-collections
+        - prelude
+        - profunctor-lenses
+        - rationals
+        - strings
+        - stringutils
+        - transformers
+        - tuples
+        - unfoldable
+      git: https://github.com/newlandsvalley/purescript-abc-scores.git
+      ref: v0.6.8
+    halogen-components:
+      dependencies:
+        - console
+        - css
+        - effect
+        - halogen
+        - halogen-css
+        - js-fileio
+        - soundfonts
+      git: https://github.com/newlandsvalley/purescript-halogen-components.git
+      ref: v0.6.1
+  packageSet:
+    registry: 66.3.0
