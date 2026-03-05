@@ -7,7 +7,7 @@
   "devDependencies": {
     "purescript": "^0.15.15",
     "purescript-psa": "^0.5.1",
-    "spago": "^0.93.44"
+    "spago": "^1.0.3"
   },
   "dependencies": {
     "esbuild": "^0.25.9"
