@@ -50,7 +50,7 @@ workspace:
         - transformers
         - tuples
       git: https://github.com/newlandsvalley/purescript-abc-melody.git
-      ref: v0.4.0
+      ref: f23ee4a3d6a5a48b69aeb249be95777cfe6f5289
     abc-scores:
       dependencies:
         - abc-parser
